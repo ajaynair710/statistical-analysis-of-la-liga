@@ -1,0 +1,104 @@
+---
+title: "1_initial_analysis"
+author: "Ajay Prakash Nair"
+date: "2024-10-23"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+# Set CRAN mirror
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+
+# Other setup configurations
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Requirements
+
+```{r requirements}
+requirements=c("tidyverse","mice", "caTools", "corrplot", "summarytools")
+
+for (req in requirements){
+  if (!require(req, character.only = TRUE)){
+      install.packages(req)
+  }
+}
+```
+
+# Introduction
+
+The objective of this project is to analyze the statistical data of the Spanish La Liga football league spanning the last 10 seasons, including the current ongoing season. The dataset, sourced from http://www.football-data.co.uk/, provides comprehensive information on various aspects of each match, including final and half-time results, corner kicks, and disciplinary actions such as yellow and red cards. This dataset serves as a valuable resource for understanding the dynamics of football matches in one of Europe's top football leagues.
+
+# Data Description
+
+The dataset comprises detailed statistical records of matches played in the Spanish La Liga over the past decade. Each record includes information such as match date, teams involved, final and half-time scores, number of corner kicks, as well as disciplinary actions like yellow and red cards. The data is updated on a weekly basis via Travis-CI, ensuring its timeliness and relevance to ongoing analysis.
+
+The different information of each match collected on the dataset is described in the following table:
+
+| **Label** | **Description** |
+|-----|:-------------|
+|Date| Date of the match|
+|HomeTeam| Home Team of the match|
+|AwayTeam| Away Team of the match|
+|FTHG| Full Time Home Team Goals|
+|FTAG| Full Time Away Team Goals|
+|FTR| Full Time Result (H=Home Win, D=Draw, A=Away Win)|
+|HTHG| Half Time Home Team Goals|
+|HTAG| Half Time Away Team Goals|
+|HTR| Half Time Result (H=Home Win, D=Draw, A=Away Win)|
+|HS| Home Team Shots|
+|AS| Away Team Shots|
+|HST| Home Team Shots on Target|
+|AST| Away Team Shots on Target|
+|HF| Home Team Fouls Committed|
+|AF| Away Team Fouls Committed|
+|HC| Home Team Corners|
+|AC| Away Team Corners|
+|HY| Home Team Yellow Cards|
+|AY| Away Team Yellow Cards|
+|HR| Home Team Red Cards|
+|AR| Away Team Red Cards|
+
+
+## Analysis description
+
+This analysis is based on a binary classification task: Can Barcelona win the LaLiga 2024-2025 season title?
+
+Specifically, I will answer the following questions:
+
+- To identify trends and patterns in match outcomes over the past 10 seasons of La Liga.
+- To explore the impact of various factors such as home advantage, team form, and disciplinary actions on match results.
+- To investigate any correlations between specific match statistics and overall team performance throughout the dataset period.
+- To gain insights into potential predictors of match outcomes and assess the predictive power of statistical models.
+
+# Data exploration and cleaning
+
+The CSV file downloaded from the website contains data for each season of the Spanish La Liga, starting from the 2009/2010 season and spanning up to the 21st of October of the 2024/2025 season. Each season's data is structured with various match statistics, including final and half-time scores, team information, and disciplinary actions. The dataset provides a comprehensive overview of match outcomes and related metrics for analysis spanning multiple seasons.
+
+I filtered out qualitative variables and statistics related to betting from the dataset, retaining only the essential match statistics for subsequent analysis.
+
+```{r}
+# Load the required library
+library(readr)
+
+# Read the dataset from the CSV file
+football_data <- read_csv("./dataset.csv")
+
+# Preview the first few rows of the dataset
+head(football_data)
+```
+
+To ensure the integrity of our analysis, we need to clean the data by checking for missing values, duplicate entries, and inconsistencies in data types.
+
+```{r}
+# Check for missing values
+missing_values <- colSums(is.na(football_data))
+missing_values[missing_values > 0]
+
+# Convert necessary columns to appropriate data types
+football_data$FTR <- factor(football_data$FTR, levels = c("H", "D", "A"), labels = c("Home Win", "Draw", "Away Win"))
+
+# Summary of the cleaned dataset
+summary(football_data)
+```
