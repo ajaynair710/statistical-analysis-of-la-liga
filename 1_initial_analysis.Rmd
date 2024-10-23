@@ -146,3 +146,41 @@ p3_interactive <- ggplotly(p3, tooltip = "text")
 
 p3_interactive
 ```
+
+# Bivariate Analysis
+
+Home Advantage
+```{r}
+# Analyze home advantage
+p_home_advantage <- ggplot(football_data, aes(x = FTR, fill = FTR)) +
+  geom_bar(aes(text = ..count..), position = "dodge", color = "black") +  
+  labs(title = "Home Advantage in Match Outcomes", x = "Match Result", y = "Count") +
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1))  
+
+ggplotly(p_home_advantage, tooltip = "text")
+```
+
+Goals vs. Match Outcome
+```{r}
+# Boxplot of Home Goals vs. Match Outcome
+p_home_goals <- ggplot(football_data, aes(x = FTR, y = FTHG)) +
+  geom_boxplot(aes(text = paste("Home Goals: ", FTHG)), fill = "lightblue", color = "black") +  
+  labs(title = "Home Goals vs. Match Outcome", x = "Match Outcome", y = "Home Goals") +
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1))
+
+ggplotly(p_home_goals, tooltip = "text")
+
+
+# Boxplot of Away Goals vs. Match Outcome
+p_away_goals <- ggplot(football_data, aes(x = FTR, y = FTAG)) +
+  geom_boxplot(aes(text = paste("Away Goals: ", FTAG)), fill = "lightgreen", color = "black") +  
+  labs(title = "Away Goals vs. Match Outcome", x = "Match Outcome", y = "Away Goals") +
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1))
+
+
+ggplotly(p_away_goals, tooltip = "text")
+
+```
