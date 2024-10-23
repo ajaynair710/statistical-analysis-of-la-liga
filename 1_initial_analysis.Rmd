@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Requirements
 
 ```{r requirements}
-requirements=c("tidyverse","mice", "caTools", "corrplot", "summarytools")
+requirements=c("tidyverse","mice", "caTools", "corrplot", "summarytools", "plotly")
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
@@ -101,4 +101,48 @@ football_data$FTR <- factor(football_data$FTR, levels = c("H", "D", "A"), labels
 
 # Summary of the cleaned dataset
 summary(football_data)
+```
+
+# Univariate Analysis
+
+Distribution of Match Outcomes
+
+```{r}
+library(plotly)
+# Plot the distribution of match results
+p1 <- ggplot(football_data, aes(x = FTR)) +
+  geom_bar(fill = "lightblue", color = "black") + 
+  labs(title = "Distribution of Match Results", x = "Match Outcome", y = "Count") +
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1))  
+
+p1_interactive <- ggplotly(p1)
+
+p1_interactive
+```
+
+Goals Scored Distribution
+
+```{r}
+# Histogram of Home Team Goals
+p2 <- ggplot(football_data, aes(x = FTHG)) +
+  geom_histogram(aes(text = ..count..), bins = 10, fill = "green", alpha = 0.7, color = "black") +  
+  labs(title = "Distribution of Home Team Goals", x = "Goals", y = "Count") +
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1))  
+
+p2_interactive <- ggplotly(p2, tooltip = "text")
+
+p2_interactive
+
+# Histogram of Away Team Goals
+p3 <- ggplot(football_data, aes(x = FTAG)) +
+  geom_histogram(aes(text = ..count..), bins = 10, fill = "red", alpha = 0.7, color = "black") +  
+  labs(title = "Distribution of Away Team Goals", x = "Goals", y = "Count") +
+  theme_minimal() +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1)) 
+
+p3_interactive <- ggplotly(p3, tooltip = "text")
+
+p3_interactive
 ```
