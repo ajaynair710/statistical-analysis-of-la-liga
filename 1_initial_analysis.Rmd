@@ -207,4 +207,29 @@ ggplotly(away_shots_plot)
 
 ```
 
+# Correlation Matrix
+
+```{r}
+# Select numeric columns for correlation analysis
+numeric_columns <- football_data[, c("FTHG", "FTAG", "HS", "AS", "HST", "AST", "HF", "AF", "HC", "AC", "HY", "AY", "HR", "AR")]
+
+# Compute correlation matrix
+cor_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Interactive Correlation Heatmap
+heatmap_plot <- plot_ly(
+  z = cor_matrix,
+  x = colnames(cor_matrix),
+  y = colnames(cor_matrix),
+  type = "heatmap",
+  colors = colorRamp(c("blue", "white", "red")),
+  colorbar = list(title = "Correlation")
+) %>% layout(
+  title = "Correlation Heatmap of Key Match Variables",
+  xaxis = list(tickangle = 45),
+  yaxis = list(autorange = "reversed")
+)
+
+heatmap_plot
+```
 
