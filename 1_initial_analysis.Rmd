@@ -184,3 +184,27 @@ p_away_goals <- ggplot(football_data, aes(x = FTR, y = FTAG)) +
 ggplotly(p_away_goals, tooltip = "text")
 
 ```
+
+# Multivariate Analysis
+
+## Shots and Match Outcome
+
+We will analyze the relationship between shits and match results by visualizing the number of home and away shots for each match outcome.
+
+```{r corner_kicks_analysis}
+library(plotly)
+# Interactive Boxplot for Home Shots vs. Match Outcome
+home_shots_plot <- ggplot(football_data, aes(x = FTR, y = HS)) +
+  geom_boxplot(aes(fill = FTR)) +
+  labs(title = "Home Team Shots vs. Match Outcome", x = "Full Time Result", y = "Home Team Shots")
+ggplotly(home_shots_plot)
+
+# Interactive Boxplot for Away Shots vs. Match Outcome
+away_shots_plot <- ggplot(football_data, aes(x = FTR, y = AS)) +
+  geom_boxplot(aes(fill = FTR)) +
+  labs(title = "Away Team Shots vs. Match Outcome", x = "Full Time Result", y = "Away Team Shots")
+ggplotly(away_shots_plot)
+
+```
+
+
