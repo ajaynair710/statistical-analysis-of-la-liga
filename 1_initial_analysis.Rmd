@@ -311,7 +311,7 @@ combined_summary_long <- pivot_longer(combined_summary,
 A bar plot is created with custom colors and labels for each statistic. This shows the distribution of fouls, red/yellow cards, and shots across home and away matches.
 
 ```{r}
-# Define custom color palette for the interactive plot
+# Define custom color palette for the plot
 my_colors <- c("TotalFouls" = "#1f77b4",           # Blue for Total Fouls
                "TotalRedCards" = "red",            # Red for Total Red Cards
                "TotalYellowCards" = "yellow",      # Yellow for Total Yellow Cards
@@ -337,4 +337,82 @@ interactive_plot <- ggplotly(bar_plot)
 
 # Display the interactive plot
 interactive_plot
+```
+
+# Input Data preparation (removing multicollinear variables)
+
+##Prepare the Correlation Matrix
+
+```{r}
+# Display the structure of football_data
+str(football_data)
+
+# Extract numeric variables only
+df_corr <- football_data[, sapply(football_data, is.numeric)]
+
+# Create the correlation matrix using Pearson's method
+df_corr.cor <- cor(df_corr, method = "pearson")
+
+# Load the corrplot package
+library(corrplot)
+
+# Define color palette for heatmap
+palette <- colorRampPalette(c("green", "white", "red"))(20)
+
+# Plot correlation heatmap
+heatmap(x = df_corr.cor, col = palette, symm = TRUE)
+
+```
+
+The correlation matrix helps in understanding the linear relationships between pairs of numeric variables by presenting a matrix of correlation coefficients.
+
+This heatmap visualizes the strength and direction of linear relationships between numeric variables in football_data:
+
+Green represents positive correlation. Red represents negative correlation. White is near zero, indicating little or no correlation.
+
+## Remove Multicollinear Variables
+
+```{r}
+# Select a subset of columns to reduce multicollinearity
+df_corr <- df_corr[c(7:16)]
+
+# Recompute the correlation matrix after removing multicollinear variables
+df_corr.cor <- cor(df_corr, method = "pearson")
+
+# Plot the updated heatmap
+heatmap(x = df_corr.cor, col = palette, symm = TRUE)
+
+```
+
+This step involves identifying and removing multicollinear variables from the dataset. Multicollinearity occurs when independent variables are highly correlated with each other, which can lead to instability and inflated standard errors in regression analysis. By removing multicollinear variables, we streamline the dataset for further analysis, reducing the risk of multicollinearity-related issues and improving the reliability of regression models.
+
+## Prepare the Input Dataset
+
+```{r}
+# Select columns for input data
+input_data <- football_data[c(1:3, 6, 9, 11:21)]
+```
+
+# Split Data into Training and Testing Sets
+
+Now we split the data into a 70% training dataset and a 30% test dataset.
+
+```{r}
+# Load caret package
+library(caret)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Split index creation
+index <- createDataPartition(input_data$FTR, p = 0.7, list = FALSE)
+
+# Create training and testing datasets
+train_data <- input_data[index, ]
+test_data <- input_data[-index, ]
+
+# Export the datasets to CSV files
+write.csv(train_data, "./training/training.csv", row.names = FALSE) 
+write.csv(test_data, "./testing/test.csv", row.names = FALSE)
+
 ```
