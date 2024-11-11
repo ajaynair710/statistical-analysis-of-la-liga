@@ -244,3 +244,97 @@ teams <- as.character(unique(football_data[,"HomeTeam"]))
 ```{r}
 cat(teams, sep = "\n")
 ```
+
+# Team Analysis
+
+To begin the analysis, I have decided to start with only one team to simplify the operations. In further parts of the project, I will be managing data from all teams. In this case, I have selected **FC Barcelona** as my team to analyze. The information is split into two different dataframes: one for the matches played as the Home Team and the other for the matches played as the Away Team. For the sake of order, I have divided each operation into different functions.
+
+```{r}
+# Filter Barcelona's matches from the dataset
+barcelona_matches <- football_data %>%
+  filter(HomeTeam == "Barcelona" | AwayTeam == "Barcelona")
+
+# Separate matches by home and away games
+barca_home <- barcelona_matches %>%
+  filter(HomeTeam == "Barcelona")
+
+barca_away <- barcelona_matches %>%
+  filter(AwayTeam == "Barcelona")
+```
+
+Aggregate statistics are calculated for matches where Barcelona played at home and away. This includes total fouls, red/yellow cards, shots, and shots on target.
+
+```{r}
+# Aggregate statistics for home matches
+barca_home_summary <- barca_home %>%
+  summarize(
+    TotalFouls = sum(HF),
+    TotalRedCards = sum(HR),
+    TotalYellowCards = sum(HY),
+    TotalShots = sum(HS),
+    TotalShotsOnTarget = sum(HST)
+  )
+
+# Aggregate statistics for away matches
+barca_away_summary <- barca_away %>%
+  summarize(
+    TotalFouls = sum(AF),
+    TotalRedCards = sum(AR),
+    TotalYellowCards = sum(AY),
+    TotalShots = sum(AS),
+    TotalShotsOnTarget = sum(AST)
+  )
+
+# Display summaries
+print(barca_home_summary)
+print(barca_away_summary)
+
+```
+
+I combined the home and away summaries for easier comparison. Then, the data is reshaped into a long format suitable for plotting, with each statistic represented separately.
+
+```{r}
+# Combine summaries and add MatchType information
+combined_summary <- bind_rows(
+  mutate(barca_home_summary, MatchType = "Home"),
+  mutate(barca_away_summary, MatchType = "Away")
+)
+
+# Reshape for plotting
+combined_summary_long <- pivot_longer(combined_summary, 
+                                      cols = c(TotalFouls, TotalRedCards, TotalYellowCards, TotalShots, TotalShotsOnTarget),
+                                      names_to = "Statistic",
+                                      values_to = "Count")
+
+```
+
+A bar plot is created with custom colors and labels for each statistic. This shows the distribution of fouls, red/yellow cards, and shots across home and away matches.
+
+```{r}
+# Define custom color palette for the interactive plot
+my_colors <- c("TotalFouls" = "#1f77b4",           # Blue for Total Fouls
+               "TotalRedCards" = "red",            # Red for Total Red Cards
+               "TotalYellowCards" = "yellow",      # Yellow for Total Yellow Cards
+               "TotalShots" = "#2ca02c",           # Green for Total Shots
+               "TotalShotsOnTarget" = "violet")    # Violet for Total Shots on Target
+
+# Create ggplot
+bar_plot <- ggplot(combined_summary_long, aes(x = MatchType, y = Count, fill = Statistic, label = Count)) +
+  geom_bar(stat = "identity", position = position_dodge(), color = "black") +
+  geom_text(position = position_dodge(width = 0.9), vjust = -0.5, size = 3, 
+            aes(group = Statistic), color = "black", fontface = "bold", show.legend = FALSE) +
+  labs(title = "Summary of Barcelona Matches",
+       y = "Count", x = "Match Type", fill = "Statistic") +
+  scale_fill_manual(values = my_colors) +
+  theme_minimal() +
+  theme(legend.position = "top",
+        axis.title.x = element_text(size = 12, face = "bold"),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+
+# Convert ggplot to an interactive plotly plot
+interactive_plot <- ggplotly(bar_plot)
+
+# Display the interactive plot
+interactive_plot
+```
