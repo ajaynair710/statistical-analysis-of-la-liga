@@ -147,8 +147,6 @@ p3_interactive <- ggplotly(p3, tooltip = "text")
 p3_interactive
 ```
 
-# Bivariate Analysis
-
 Home Advantage
 ```{r}
 # Analyze home advantage
@@ -160,6 +158,8 @@ p_home_advantage <- ggplot(football_data, aes(x = FTR, fill = FTR)) +
 
 ggplotly(p_home_advantage, tooltip = "text")
 ```
+
+# Bivariate Analysis
 
 Goals vs. Match Outcome
 ```{r}
@@ -233,3 +233,14 @@ heatmap_plot <- plot_ly(
 heatmap_plot
 ```
 
+# Team Data
+
+An interesting list to have in order to manage the data is the list of teams. This is extracted using the unique function as follows:
+
+```{r}
+teams <- as.character(unique(football_data[,"HomeTeam"]))
+```
+
+```{r}
+cat(teams, sep = "\n")
+```
