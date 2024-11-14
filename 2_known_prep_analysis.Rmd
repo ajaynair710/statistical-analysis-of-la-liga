@@ -26,3 +26,15 @@ for (req in requirements){
 }
 ```
 
+#Load the data
+
+```{r}
+# Load training and test data
+train_data <- read.csv("training/training.csv")
+test_data <- read.csv("testing/test.csv")
+
+# Check the structure of the datasets
+str(train_data)
+str(test_data)
+
+```
