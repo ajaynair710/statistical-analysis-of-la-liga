@@ -1,0 +1,28 @@
+---
+title: "2_known_prep_analysis"
+author: "Ajay Prakash Nair"
+date: "2024-11-14"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+# Set CRAN mirror
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+
+# Other setup configurations
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Requirements
+
+```{r requirements}
+requirements=c("tidyverse","mice", "caTools", "corrplot", "summarytools", "plotly")
+
+for (req in requirements){
+  if (!require(req, character.only = TRUE)){
+      install.packages(req)
+  }
+}
+```
+
