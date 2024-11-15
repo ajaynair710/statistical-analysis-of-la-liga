@@ -87,7 +87,7 @@ test_output <- test_output[c(1:4, 17)]
 names(test_output)[4] <- "Actual"
 
 # Save prediction output as CSV file
-write.csv(test_output, "./testing/output.csv", row.names = FALSE)
+write.csv(test_output, "./testing/logistic-regression-output.csv", row.names = FALSE)
 
 ```
 
