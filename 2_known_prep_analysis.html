@@ -359,118 +359,90 @@ display: none;
 
 <div id="requirements" class="section level1">
 <h1>Requirements</h1>
-<pre class="r"><code>requirements=c(&quot;tidyverse&quot;,&quot;mice&quot;, &quot;caTools&quot;, &quot;corrplot&quot;, &quot;summarytools&quot;, &quot;plotly&quot;)
+<pre class="r"><code>requirements=c(&quot;summarytools&quot;, &quot;pROC&quot;, &quot;glmnetUtils&quot;, &quot;dplyr&quot;, &quot;car&quot;, &quot;effects&quot;, &quot;gridExtra&quot;, &quot;grid&quot;, &quot;MASS&quot;,&quot;e1071&quot;, &quot;mgcv&quot;, &quot;caret&quot;)
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
       install.packages(req)
   }
 }</code></pre>
-<pre><code>## Loading required package: tidyverse</code></pre>
-<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-## ✔ dplyr     1.1.4     ✔ readr     2.1.5
-## ✔ forcats   1.0.0     ✔ stringr   1.5.1
-## ✔ ggplot2   3.5.1     ✔ tibble    3.2.1
-## ✔ lubridate 1.9.3     ✔ tidyr     1.3.1
-## ✔ purrr     1.0.2     
-## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-## ✖ dplyr::filter() masks stats::filter()
-## ✖ dplyr::lag()    masks stats::lag()
-## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors
-## Loading required package: mice
+<pre><code>## Loading required package: summarytools</code></pre>
+<pre><code>## Loading required package: pROC</code></pre>
+<pre><code>## Type &#39;citation(&quot;pROC&quot;)&#39; for a citation.</code></pre>
+<pre><code>## 
+## Attaching package: &#39;pROC&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
 ## 
+##     cov, smooth, var</code></pre>
+<pre><code>## Loading required package: glmnetUtils</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;glmnetUtils&#39;</code></pre>
+<pre><code>## Installing package into &#39;C:/Users/ajayn/AppData/Local/R/win-library/4.4&#39;
+## (as &#39;lib&#39; is unspecified)</code></pre>
+<pre><code>## Loading required package: dplyr</code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
 ## 
-## Attaching package: &#39;mice&#39;
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
 ## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre><code>## Loading required package: car</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;car&#39;</code></pre>
+<pre><code>## Installing package into &#39;C:/Users/ajayn/AppData/Local/R/win-library/4.4&#39;
+## (as &#39;lib&#39; is unspecified)</code></pre>
+<pre><code>## also installing the dependencies &#39;cowplot&#39;, &#39;Deriv&#39;, &#39;microbenchmark&#39;, &#39;doBy&#39;, &#39;SparseM&#39;, &#39;MatrixModels&#39;, &#39;carData&#39;, &#39;abind&#39;, &#39;Formula&#39;, &#39;pbkrtest&#39;, &#39;quantreg&#39;</code></pre>
+<pre><code>## Loading required package: effects</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;effects&#39;</code></pre>
+<pre><code>## Installing package into &#39;C:/Users/ajayn/AppData/Local/R/win-library/4.4&#39;
+## (as &#39;lib&#39; is unspecified)</code></pre>
+<pre><code>## also installing the dependencies &#39;mitools&#39;, &#39;RcppArmadillo&#39;, &#39;survey&#39;, &#39;estimability&#39;, &#39;insight&#39;</code></pre>
+<pre><code>## Loading required package: gridExtra</code></pre>
+<pre><code>## Warning in library(package, lib.loc = lib.loc, character.only = TRUE,
+## logical.return = TRUE, : there is no package called &#39;gridExtra&#39;</code></pre>
+<pre><code>## Installing package into &#39;C:/Users/ajayn/AppData/Local/R/win-library/4.4&#39;
+## (as &#39;lib&#39; is unspecified)</code></pre>
+<pre><code>## Loading required package: grid</code></pre>
+<pre><code>## Loading required package: MASS</code></pre>
+<pre><code>## 
+## Attaching package: &#39;MASS&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
 ## 
-## The following object is masked from &#39;package:stats&#39;:
+##     select</code></pre>
+<pre><code>## Loading required package: e1071</code></pre>
+<pre><code>## Loading required package: mgcv</code></pre>
+<pre><code>## Loading required package: nlme</code></pre>
+<pre><code>## 
+## Attaching package: &#39;nlme&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
 ## 
-##     filter
-## 
-## 
-## The following objects are masked from &#39;package:base&#39;:
-## 
-##     cbind, rbind
-## 
-## 
-## Loading required package: caTools
-## 
-## Loading required package: corrplot
-## 
-## corrplot 0.94 loaded
-## 
-## Loading required package: summarytools
-## 
-## 
-## Attaching package: &#39;summarytools&#39;
-## 
-## 
-## The following object is masked from &#39;package:tibble&#39;:
-## 
-##     view
-## 
-## 
-## Loading required package: plotly
-## 
-## 
-## Attaching package: &#39;plotly&#39;
-## 
-## 
-## The following object is masked from &#39;package:ggplot2&#39;:
-## 
-##     last_plot
-## 
-## 
-## The following object is masked from &#39;package:stats&#39;:
-## 
-##     filter
-## 
-## 
-## The following object is masked from &#39;package:graphics&#39;:
-## 
-##     layout</code></pre>
-<p>#Load the data</p>
-<pre class="r"><code># Load training and test data
-train_data &lt;- read.csv(&quot;training/training.csv&quot;)
-test_data &lt;- read.csv(&quot;testing/test.csv&quot;)
-
-# Check the structure of the datasets
-str(train_data)</code></pre>
-<pre><code>## &#39;data.frame&#39;:    4061 obs. of  16 variables:
-##  $ Date    : chr  &quot;29/08/09&quot; &quot;29/08/09&quot; &quot;30/08/09&quot; &quot;30/08/09&quot; ...
-##  $ HomeTeam: chr  &quot;Real Madrid&quot; &quot;Zaragoza&quot; &quot;Almeria&quot; &quot;Malaga&quot; ...
-##  $ AwayTeam: chr  &quot;La Coruna&quot; &quot;Tenerife&quot; &quot;Valladolid&quot; &quot;Ath Madrid&quot; ...
-##  $ FTR     : chr  &quot;Home Win&quot; &quot;Home Win&quot; &quot;Draw&quot; &quot;Home Win&quot; ...
-##  $ HTR     : chr  &quot;H&quot; &quot;D&quot; &quot;D&quot; &quot;H&quot; ...
-##  $ AS      : int  9 16 7 16 7 9 3 9 17 14 ...
-##  $ HST     : int  11 8 5 4 3 3 6 9 3 3 ...
-##  $ AST     : int  3 2 1 3 3 6 1 5 6 9 ...
-##  $ HF      : int  18 16 9 16 14 14 20 10 17 15 ...
-##  $ AF      : int  12 17 11 8 13 10 14 12 17 19 ...
-##  $ HC      : int  10 7 12 4 6 4 7 9 4 2 ...
-##  $ AC      : int  3 8 2 5 6 5 0 7 6 5 ...
-##  $ HY      : int  2 1 2 4 3 2 1 0 2 3 ...
-##  $ AY      : int  2 4 2 4 1 3 2 2 2 0 ...
-##  $ HR      : int  0 0 0 0 0 0 0 0 0 0 ...
-##  $ AR      : int  0 0 1 0 2 0 1 0 0 0 ...</code></pre>
-<pre class="r"><code>str(test_data)</code></pre>
-<pre><code>## &#39;data.frame&#39;:    1739 obs. of  16 variables:
-##  $ Date    : chr  &quot;30/08/09&quot; &quot;30/08/09&quot; &quot;12/09/09&quot; &quot;13/09/09&quot; ...
-##  $ HomeTeam: chr  &quot;Ath Bilbao&quot; &quot;Osasuna&quot; &quot;Ath Madrid&quot; &quot;Valladolid&quot; ...
-##  $ AwayTeam: chr  &quot;Espanol&quot; &quot;Villarreal&quot; &quot;Santander&quot; &quot;Valencia&quot; ...
-##  $ FTR     : chr  &quot;Home Win&quot; &quot;Draw&quot; &quot;Draw&quot; &quot;Away Win&quot; ...
-##  $ HTR     : chr  &quot;D&quot; &quot;D&quot; &quot;D&quot; &quot;A&quot; ...
-##  $ AS      : int  8 11 8 15 11 11 8 10 17 20 ...
-##  $ HST     : int  4 2 10 9 4 9 6 1 4 7 ...
-##  $ AST     : int  1 7 3 6 6 6 2 3 6 7 ...
-##  $ HF      : int  11 18 13 10 11 21 4 23 23 15 ...
-##  $ AF      : int  18 14 20 15 16 19 16 15 20 22 ...
-##  $ HC      : int  6 4 7 2 4 8 4 4 4 5 ...
-##  $ AC      : int  3 14 2 3 5 3 10 3 5 8 ...
-##  $ HY      : int  2 2 1 1 1 2 2 3 2 1 ...
-##  $ AY      : int  6 2 2 2 3 5 4 3 3 5 ...
-##  $ HR      : int  0 0 0 0 0 0 0 2 1 0 ...
-##  $ AR      : int  0 0 1 0 0 0 0 0 0 0 ...</code></pre>
+##     collapse</code></pre>
+<pre><code>## This is mgcv 1.9-1. For overview type &#39;help(&quot;mgcv-package&quot;)&#39;.</code></pre>
+<pre><code>## Loading required package: caret</code></pre>
+<pre><code>## Loading required package: ggplot2</code></pre>
+<pre><code>## Loading required package: lattice</code></pre>
+</div>
+<div id="analysis-description" class="section level1">
+<h1>Analysis Description</h1>
+<p>This analysis focuses on building and evaluating predictive models
+using logistic regression and Naive Bayes for the dataset. The dataset
+comprises training and testing data that was splitted in the previous
+stage. Logistic regression is employed to predict outcomes based on a
+set of predictor variables. The objective is to assess the predictive
+performance of the models and evaluate their ability to classify
+outcomes accurately.</p>
+</div>
+<div id="loading-data" class="section level1">
+<h1>Loading data</h1>
+<pre class="r"><code>train_data &lt;- read.csv(&quot;./training/training.csv&quot;)
+cat(&quot;Training data dimensions:&quot;, dim(train_data), &quot;\n&quot;)</code></pre>
+<pre><code>## Training data dimensions: 4061 16</code></pre>
+<pre class="r"><code>test_data &lt;- read.csv(&quot;./testing/test.csv&quot;)
+cat(&quot;Testing data dimensions:&quot;, dim(test_data), &quot;\n&quot;)</code></pre>
+<pre><code>## Testing data dimensions: 1739 16</code></pre>
 </div>
 
 
