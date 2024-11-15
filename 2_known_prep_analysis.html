@@ -568,7 +568,7 @@ test_output &lt;- test_output[c(1:4, 17)]
 names(test_output)[4] &lt;- &quot;Actual&quot;
 
 # Save prediction output as CSV file
-write.csv(test_output, &quot;./testing/output.csv&quot;, row.names = FALSE)</code></pre>
+write.csv(test_output, &quot;./testing/logistic-regression-output.csv&quot;, row.names = FALSE)</code></pre>
 <pre class="r"><code># Convert predicted and actual values to factors with two levels
 predicted_factor &lt;- factor(test_output$Predicted, levels = c(&quot;Home Win&quot;, &quot;Away Win&quot;))
 actual_factor &lt;- factor(test_data$FTR, levels = c(&quot;Home Win&quot;, &quot;Away Win&quot;))
@@ -634,7 +634,7 @@ install.packages(&#39;e1071&#39;, dependencies = TRUE)</code></pre>
 <pre><code>## package &#39;yardstick&#39; successfully unpacked and MD5 sums checked
 ## 
 ## The downloaded binary packages are in
-##  C:\Users\ajayn\AppData\Local\Temp\RtmpugODrh\downloaded_packages</code></pre>
+##  C:\Users\ajayn\AppData\Local\Temp\RtmpATmAtr\downloaded_packages</code></pre>
 <pre class="r"><code>library(caret) 
 library(yardstick)</code></pre>
 <pre><code>## Warning: package &#39;yardstick&#39; was built under R version 4.4.2</code></pre>
