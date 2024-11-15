@@ -16,8 +16,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Requirements
 
-```{r requirements}
-requirements=c("tidyverse","mice", "caTools", "corrplot", "summarytools", "plotly")
+```{r requirements, results='hide'}
+requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret")
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
@@ -26,15 +26,16 @@ for (req in requirements){
 }
 ```
 
-#Load the data
+# Analysis Description
+
+This analysis focuses on building and evaluating predictive models using logistic regression and Naive Bayes for the dataset. The dataset comprises training and testing data that was splitted in the previous stage. Logistic regression is employed to predict outcomes based on a set of predictor variables. The objective is to assess the predictive performance of the models and evaluate their ability to classify outcomes accurately.
+
+# Loading data
 
 ```{r}
-# Load training and test data
-train_data <- read.csv("training/training.csv")
-test_data <- read.csv("testing/test.csv")
+train_data <- read.csv("./training/training.csv")
+cat("Training data dimensions:", dim(train_data), "\n")
 
-# Check the structure of the datasets
-str(train_data)
-str(test_data)
-
+test_data <- read.csv("./testing/test.csv")
+cat("Testing data dimensions:", dim(test_data), "\n")
 ```
