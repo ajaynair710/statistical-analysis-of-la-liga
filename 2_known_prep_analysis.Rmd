@@ -39,3 +39,144 @@ cat("Training data dimensions:", dim(train_data), "\n")
 test_data <- read.csv("./testing/test.csv")
 cat("Testing data dimensions:", dim(test_data), "\n")
 ```
+
+# Logistic Regression
+
+The logistic regression analysis involves two main stages: model building and evaluation. In the model-building stage, logistic regression models are trained using the training dataset. Two models are considered: one with all variables and another with only relevant variables. The significance of each predictor variable is assessed based on the model summary and p-values.
+
+```{r}
+# Defining reference level as "Draw"
+train_data$FTR <- relevel(factor(train_data$FTR), ref = "Draw")
+
+# Load required package
+require(nnet)
+
+# Model with all variables
+multinom.model_1 <- multinom(FTR ~ HST + AST + HF + AF + HC + AC + HY + AY + HR + AR + 1, data = train_data)
+summary(multinom.model_1)
+
+# Calculate p-values
+summary <- summary(multinom.model_1)$coefficients / summary(multinom.model_1)$standard.errors
+p <- (1 - pnorm(abs(summary), 0, 1)) * 2
+head(p)
+
+# Model with only relevant variables
+multinom.model_2 <- multinom(FTR ~ AST + HST + AF + HC + AC + HR + AR + 1, data = train_data)
+summary(multinom.model_2)
+
+# Calculate p-values
+summary <- summary(multinom.model_2)$coefficients / summary(multinom.model_2)$standard.errors
+p <- (1 - pnorm(abs(summary), 0, 1)) * 2
+head(p)
+
+# Odds ratio
+exp(coef(multinom.model_2))
+
+# Rename the model
+multinom.model <- multinom.model_2
+
+```
+
+# Prediction on test data
+
+```{r}
+# Prediction on test data
+test_output <- test_data
+test_output$Predicted <- predict(multinom.model, newdata = test_output, "class")
+test_output <- test_output[c(1:4, 17)]
+names(test_output)[4] <- "Actual"
+
+# Save prediction output as CSV file
+write.csv(test_output, "./testing/output.csv", row.names = FALSE)
+
+```
+
+```{r}
+# Convert predicted and actual values to factors with two levels
+predicted_factor <- factor(test_output$Predicted, levels = c("Home Win", "Away Win"))
+actual_factor <- factor(test_data$FTR, levels = c("Home Win", "Away Win"))
+
+# Model Evaluation: Confusion Matrix and Evaluation Metrics
+conf_matrix <- confusionMatrix(predicted_factor, actual_factor)
+
+# Display the confusion matrix and evaluation metrics
+print(conf_matrix$table)
+cat("Overall Accuracy:", conf_matrix$overall['Accuracy'], "\n")
+cat("Sensitivity:", conf_matrix$byClass['Sensitivity'], "\n")
+cat("Specificity:", conf_matrix$byClass['Specificity'], "\n")
+
+# ROC Curve and AUC Calculation
+library(pROC)
+roc_curve <- roc(actual_factor, as.numeric(predicted_factor == "Home Win"))
+auc <- auc(roc_curve)
+
+# Plot ROC curve
+plot(roc_curve, main = "ROC Curve")
+abline(a = 0, b = 1, lty = 2, col = "gray")
+cat("AUC:", auc, "\n")
+
+```
+
+Accuracy represents the proportion of correct predictions among all predictions made by the model. In this context, an accuracy of approximately 80.73% suggests that the model correctly predicts the outcome (Home Win, Away Win, or Draw) for about 80.73% of matches in the test dataset.
+
+Sensitivity measures the proportion of actual positive cases (Home Wins or Away Wins) that are correctly identified by the model. A sensitivity of approximately 88.14% indicates that the model performs well in predicting Home Wins and Away Wins when they occur, capturing about 88.14% of these cases.
+
+Specificity measures the proportion of actual negative cases (Draws) that are correctly identified by the model. A specificity of approximately 68.11% indicates that the model accurately identifies Draw outcomes when they do not occur, capturing about 68.11% of these cases.
+
+The ROC curve illustrates the trade-off between sensitivity and specificity across different thresholds for classifying outcomes. The AUC quantifies the overall performance of the model in distinguishing between different classes. An AUC of approximately 78.12% suggests that the model has a moderate level of discrimination ability, with higher values indicating better discrimination between classes.
+
+# Evaluating the model 
+
+```{r}
+# Building confusion matrix
+install.packages('e1071', dependencies = TRUE)
+install.packages('yardstick')
+
+library(caret) 
+library(yardstick)
+
+observations <- factor(test_output$Actual, levels = c("Home Win", "Away Win", "Draw"))
+predicted <- factor(test_output$Predicted, levels = c("Home Win", "Away Win", "Draw"))
+
+conf <- table(predicted, observations)
+
+f.conf <- confusionMatrix(conf)
+
+library(ggplot2)
+
+mat_conf <- data.frame(
+  FTR = sample(0:1, nrow(test_output), replace = TRUE),
+  predicted = sample(0:1, nrow(test_output), replace = TRUE)
+)
+mat_conf$FTR <- observations
+mat_conf$predicted <- predicted
+
+cm <- conf_mat(mat_conf, FTR, predicted)
+
+# Visualize confusion matrix
+autoplot(cm, type = "heatmap") +
+  scale_fill_gradient(low = "firebrick1", high = "aquamarine1")
+
+print(f.conf)
+```
+
+Here's a breakdown of the interpretation:
+
+Accuracy: The model correctly predicts the outcome for approximately 60.24% of matches.
+
+Sensitivity: The model’s ability to correctly identify Home Wins (H) is approximately 82.58%, and its ability to correctly identify Away Wins (A) is approximately 63.06%. However, it performs poorly in predicting Draws (D) with a sensitivity of approximately 15.166%.
+
+Specificity: The model has high specificity for Away Wins (A) and Draws (D), indicating its ability to accurately identify these outcomes when they do not occur. The specificity for Home Wins is 57.56%, for Away Wins is approximately 83.03%, and for Draws, it’s approximately 93.270%.
+
+Precision: The precision for Home Wins (H), Away Wins (A), and Draws (D) is approximately 63.31%, 59.05%, and 42.953%, respectively. This indicates the proportion of correct predictions among the predicted instances of each class.
+
+Balanced Accuracy: The overall balanced accuracy of the model is approximately 70.07% for the Home Wins 73.04% for Away Wins and 54.21% for Draws, which considers the sensitivity and specificity for each class and provides a more comprehensive measure of the model’s performance.
+
+Overall, while the model performs reasonably well in predicting Home Wins and Away Wins, it struggles to accurately predict Draws.
+
+# Saving the Model
+
+```{r}
+# Save the model object to a file
+saveRDS(multinom.model, "./model/model_file.rds")
+```
