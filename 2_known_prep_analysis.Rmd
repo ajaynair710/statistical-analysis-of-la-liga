@@ -198,3 +198,18 @@ naive_bayes_model <- naiveBayes(FTR ~ HST + AST + HF + AF + HC + AC + HY + AY + 
 # Summary of the model
 print(naive_bayes_model)
 ```
+
+## Prediction on Test Data
+
+Now that we have trained the Naive Bayes model, we can use it to predict the outcomes for the test dataset.
+
+```{r}
+# Prediction on test data
+test_output <- test_data
+test_output$Predicted <- predict(naive_bayes_model, newdata = test_output)
+test_output <- test_output[c(1:4, 17)]
+names(test_output)[4] <- "Actual"
+
+# Save prediction output as CSV file
+write.csv(test_output, "./testing/naive-bayes-output.csv", row.names = FALSE)
+```
