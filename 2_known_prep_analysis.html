@@ -558,9 +558,8 @@ exp(coef(multinom.model_2))</code></pre>
 ## Home Win 0.5841155 1.0366246</code></pre>
 <pre class="r"><code># Rename the model
 multinom.model &lt;- multinom.model_2</code></pre>
-</div>
-<div id="prediction-on-test-data" class="section level1">
-<h1>Prediction on test data</h1>
+<div id="prediction-on-test-data" class="section level2">
+<h2>Prediction on test data</h2>
 <pre class="r"><code># Prediction on test data
 test_output &lt;- test_data
 test_output$Predicted &lt;- predict(multinom.model, newdata = test_output, &quot;class&quot;)
@@ -623,8 +622,8 @@ between different classes. An AUC of approximately 78.12% suggests that
 the model has a moderate level of discrimination ability, with higher
 values indicating better discrimination between classes.</p>
 </div>
-<div id="evaluating-the-model" class="section level1">
-<h1>Evaluating the model</h1>
+<div id="evaluating-the-model" class="section level2">
+<h2>Evaluating the model</h2>
 <pre class="r"><code># Building confusion matrix
 install.packages(&#39;e1071&#39;, dependencies = TRUE)</code></pre>
 <pre><code>## Warning: package &#39;e1071&#39; is in use and will not be installed</code></pre>
@@ -634,7 +633,7 @@ install.packages(&#39;e1071&#39;, dependencies = TRUE)</code></pre>
 <pre><code>## package &#39;yardstick&#39; successfully unpacked and MD5 sums checked
 ## 
 ## The downloaded binary packages are in
-##  C:\Users\ajayn\AppData\Local\Temp\RtmpATmAtr\downloaded_packages</code></pre>
+##  C:\Users\ajayn\AppData\Local\Temp\RtmpYtFgQL\downloaded_packages</code></pre>
 <pre class="r"><code>library(caret) 
 library(yardstick)</code></pre>
 <pre><code>## Warning: package &#39;yardstick&#39; was built under R version 4.4.2</code></pre>
@@ -722,10 +721,17 @@ performance.</p>
 <p>Overall, while the model performs reasonably well in predicting Home
 Wins and Away Wins, it struggles to accurately predict Draws.</p>
 </div>
-<div id="saving-the-model" class="section level1">
-<h1>Saving the Model</h1>
+<div id="saving-the-model" class="section level2">
+<h2>Saving the Model</h2>
 <pre class="r"><code># Save the model object to a file
 saveRDS(multinom.model, &quot;./model/model_file.rds&quot;)</code></pre>
+</div>
+</div>
+<div id="naive-bayes" class="section level1">
+<h1>Naive Bayes</h1>
+<p>In this section, we’ll apply the Naive Bayes algorithm to the
+dataset. We’ll first train the model using the training data and assess
+its performance.</p>
 </div>
 
 
