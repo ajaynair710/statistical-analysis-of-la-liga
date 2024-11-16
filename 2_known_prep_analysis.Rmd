@@ -277,3 +277,10 @@ autoplot(cm, type = "heatmap") +
 
 print(f.conf)
 ```
+
+## Saving the Model
+
+```{r}
+# Save the model object to a file
+saveRDS(naive_bayes_model, "./model/naive_bayes_model_file.rds")
+```
