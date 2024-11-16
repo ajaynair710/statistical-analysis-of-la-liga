@@ -226,12 +226,6 @@ actual_factor <- factor(test_data$FTR, levels = c("Home Win", "Away Win", "Draw"
 # Model Evaluation: Confusion Matrix and Evaluation Metrics
 conf_matrix <- confusionMatrix(predicted_factor, actual_factor)
 
-# Display the confusion matrix and evaluation metrics
-print(conf_matrix$table)
-cat("Overall Accuracy:", conf_matrix$overall['Accuracy'], "\n")
-cat("Sensitivity:", conf_matrix$byClass['Sensitivity'], "\n")
-cat("Specificity:", conf_matrix$byClass['Specificity'], "\n")
-
 # ROC Curve and AUC Calculation
 library(pROC)
 roc_curve <- roc(actual_factor, as.numeric(predicted_factor == "Home Win"))
