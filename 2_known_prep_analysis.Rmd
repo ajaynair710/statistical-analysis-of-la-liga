@@ -242,3 +242,38 @@ plot(roc_curve, main = "ROC Curve")
 abline(a = 0, b = 1, lty = 2, col = "gray")
 cat("AUC:", auc, "\n")
 ```
+
+## Evaluating the Model
+
+```{r}
+# Building confusion matrix
+install.packages('e1071', dependencies = TRUE)
+install.packages('yardstick')
+
+library(caret)
+library(yardstick)
+
+observations <- factor(test_output$Actual, levels = c("Home Win", "Away Win", "Draw"))
+predicted <- factor(test_output$Predicted, levels = c("Home Win", "Away Win", "Draw"))
+
+conf <- table(predicted, observations)
+
+f.conf <- confusionMatrix(conf)
+
+library(ggplot2)
+
+mat_conf <- data.frame(
+  FTR = sample(0:1, nrow(test_output), replace = TRUE),
+  predicted = sample(0:1, nrow(test_output), replace = TRUE)
+)
+mat_conf$FTR <- observations
+mat_conf$predicted <- predicted
+
+cm <- conf_mat(mat_conf, FTR, predicted)
+
+# Visualize confusion matrix
+autoplot(cm, type = "heatmap") +
+  scale_fill_gradient(low = "firebrick1", high = "aquamarine1")
+
+print(f.conf)
+```
