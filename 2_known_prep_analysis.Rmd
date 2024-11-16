@@ -184,3 +184,17 @@ saveRDS(multinom.model, "./model/model_file.rds")
 # Naive Bayes
 
 In this section, we'll apply the Naive Bayes algorithm to the dataset. We'll first train the model using the training data and assess its performance.
+
+```{r}
+# Load required package
+require(e1071)
+
+# Convert target variable (FTR) to factor
+train_data$FTR <- factor(train_data$FTR, levels = c("Home Win", "Away Win", "Draw"))
+
+# Train the Naive Bayes model
+naive_bayes_model <- naiveBayes(FTR ~ HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)
+
+# Summary of the model
+print(naive_bayes_model)
+```
