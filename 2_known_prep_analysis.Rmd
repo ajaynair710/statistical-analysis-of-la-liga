@@ -213,3 +213,32 @@ names(test_output)[4] <- "Actual"
 # Save prediction output as CSV file
 write.csv(test_output, "./testing/naive-bayes-output.csv", row.names = FALSE)
 ```
+
+## Model Evaluation
+
+We'll now assess the model's performance using a confusion matrix and other evaluation metrics.
+
+```{r}
+# Convert predicted and actual values to factors
+predicted_factor <- factor(test_output$Predicted, levels = c("Home Win", "Away Win", "Draw"))
+actual_factor <- factor(test_data$FTR, levels = c("Home Win", "Away Win", "Draw"))
+
+# Model Evaluation: Confusion Matrix and Evaluation Metrics
+conf_matrix <- confusionMatrix(predicted_factor, actual_factor)
+
+# Display the confusion matrix and evaluation metrics
+print(conf_matrix$table)
+cat("Overall Accuracy:", conf_matrix$overall['Accuracy'], "\n")
+cat("Sensitivity:", conf_matrix$byClass['Sensitivity'], "\n")
+cat("Specificity:", conf_matrix$byClass['Specificity'], "\n")
+
+# ROC Curve and AUC Calculation
+library(pROC)
+roc_curve <- roc(actual_factor, as.numeric(predicted_factor == "Home Win"))
+auc <- auc(roc_curve)
+
+# Plot ROC curve
+plot(roc_curve, main = "ROC Curve")
+abline(a = 0, b = 1, lty = 2, col = "gray")
+cat("AUC:", auc, "\n")
+```
