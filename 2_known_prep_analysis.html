@@ -633,7 +633,7 @@ install.packages(&#39;e1071&#39;, dependencies = TRUE)</code></pre>
 <pre><code>## package &#39;yardstick&#39; successfully unpacked and MD5 sums checked
 ## 
 ## The downloaded binary packages are in
-##  C:\Users\ajayn\AppData\Local\Temp\RtmpSKxCmb\downloaded_packages</code></pre>
+##  C:\Users\ajayn\AppData\Local\Temp\Rtmp4U3GB8\downloaded_packages</code></pre>
 <pre class="r"><code>library(caret) 
 library(yardstick)</code></pre>
 <pre><code>## Warning: package &#39;yardstick&#39; was built under R version 4.4.2</code></pre>
@@ -838,20 +838,7 @@ actual_factor &lt;- factor(test_data$FTR, levels = c(&quot;Home Win&quot;, &quot
 # Model Evaluation: Confusion Matrix and Evaluation Metrics
 conf_matrix &lt;- confusionMatrix(predicted_factor, actual_factor)
 
-# Display the confusion matrix and evaluation metrics
-print(conf_matrix$table)</code></pre>
-<pre><code>##           Reference
-## Prediction Home Win Away Win Draw
-##   Home Win      672      171  273
-##   Away Win      110      276  121
-##   Draw           34       40   42</code></pre>
-<pre class="r"><code>cat(&quot;Overall Accuracy:&quot;, conf_matrix$overall[&#39;Accuracy&#39;], &quot;\n&quot;)</code></pre>
-<pre><code>## Overall Accuracy: 0.5692927</code></pre>
-<pre class="r"><code>cat(&quot;Sensitivity:&quot;, conf_matrix$byClass[&#39;Sensitivity&#39;], &quot;\n&quot;)</code></pre>
-<pre><code>## Sensitivity: NA</code></pre>
-<pre class="r"><code>cat(&quot;Specificity:&quot;, conf_matrix$byClass[&#39;Specificity&#39;], &quot;\n&quot;)</code></pre>
-<pre><code>## Specificity: NA</code></pre>
-<pre class="r"><code># ROC Curve and AUC Calculation
+# ROC Curve and AUC Calculation
 library(pROC)
 roc_curve &lt;- roc(actual_factor, as.numeric(predicted_factor == &quot;Home Win&quot;))</code></pre>
 <pre><code>## Warning in roc.default(actual_factor, as.numeric(predicted_factor == &quot;Home
