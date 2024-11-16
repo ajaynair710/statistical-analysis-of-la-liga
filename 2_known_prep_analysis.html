@@ -633,7 +633,7 @@ install.packages(&#39;e1071&#39;, dependencies = TRUE)</code></pre>
 <pre><code>## package &#39;yardstick&#39; successfully unpacked and MD5 sums checked
 ## 
 ## The downloaded binary packages are in
-##  C:\Users\ajayn\AppData\Local\Temp\Rtmp2pN0jM\downloaded_packages</code></pre>
+##  C:\Users\ajayn\AppData\Local\Temp\RtmpSKxCmb\downloaded_packages</code></pre>
 <pre class="r"><code>library(caret) 
 library(yardstick)</code></pre>
 <pre><code>## Warning: package &#39;yardstick&#39; was built under R version 4.4.2</code></pre>
@@ -933,6 +933,11 @@ autoplot(cm, type = &quot;heatmap&quot;) +
 ## Detection Rate                0.3864          0.1587     0.02415
 ## Detection Prevalence          0.6417          0.2915     0.06671
 ## Balanced Accuracy             0.6712          0.6911     0.51977</code></pre>
+</div>
+<div id="saving-the-model-1" class="section level2">
+<h2>Saving the Model</h2>
+<pre class="r"><code># Save the model object to a file
+saveRDS(naive_bayes_model, &quot;./model/naive_bayes_model_file.rds&quot;)</code></pre>
 </div>
 </div>
 
