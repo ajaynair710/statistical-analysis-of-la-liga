@@ -633,7 +633,7 @@ install.packages(&#39;e1071&#39;, dependencies = TRUE)</code></pre>
 <pre><code>## package &#39;yardstick&#39; successfully unpacked and MD5 sums checked
 ## 
 ## The downloaded binary packages are in
-##  C:\Users\ajayn\AppData\Local\Temp\RtmpEVfAy1\downloaded_packages</code></pre>
+##  C:\Users\ajayn\AppData\Local\Temp\RtmpG2hqQd\downloaded_packages</code></pre>
 <pre class="r"><code>library(caret) 
 library(yardstick)</code></pre>
 <pre><code>## Warning: package &#39;yardstick&#39; was built under R version 4.4.2</code></pre>
@@ -814,6 +814,19 @@ print(naive_bayes_model)</code></pre>
 ##   Home Win 0.18014706 0.4271461
 ##   Away Win 0.08787346 0.2953951
 ##   Draw     0.16094210 0.3909656</code></pre>
+<div id="prediction-on-test-data-1" class="section level2">
+<h2>Prediction on Test Data</h2>
+<p>Now that we have trained the Naive Bayes model, we can use it to
+predict the outcomes for the test dataset.</p>
+<pre class="r"><code># Prediction on test data
+test_output &lt;- test_data
+test_output$Predicted &lt;- predict(naive_bayes_model, newdata = test_output)
+test_output &lt;- test_output[c(1:4, 17)]
+names(test_output)[4] &lt;- &quot;Actual&quot;
+
+# Save prediction output as CSV file
+write.csv(test_output, &quot;./testing/naive-bayes-output.csv&quot;, row.names = FALSE)</code></pre>
+</div>
 </div>
 
 
