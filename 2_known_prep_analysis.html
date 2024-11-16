@@ -633,7 +633,7 @@ install.packages(&#39;e1071&#39;, dependencies = TRUE)</code></pre>
 <pre><code>## package &#39;yardstick&#39; successfully unpacked and MD5 sums checked
 ## 
 ## The downloaded binary packages are in
-##  C:\Users\ajayn\AppData\Local\Temp\RtmpYtFgQL\downloaded_packages</code></pre>
+##  C:\Users\ajayn\AppData\Local\Temp\RtmpEVfAy1\downloaded_packages</code></pre>
 <pre class="r"><code>library(caret) 
 library(yardstick)</code></pre>
 <pre><code>## Warning: package &#39;yardstick&#39; was built under R version 4.4.2</code></pre>
@@ -732,6 +732,88 @@ saveRDS(multinom.model, &quot;./model/model_file.rds&quot;)</code></pre>
 <p>In this section, we’ll apply the Naive Bayes algorithm to the
 dataset. We’ll first train the model using the training data and assess
 its performance.</p>
+<pre class="r"><code># Load required package
+require(e1071)
+
+# Convert target variable (FTR) to factor
+train_data$FTR &lt;- factor(train_data$FTR, levels = c(&quot;Home Win&quot;, &quot;Away Win&quot;, &quot;Draw&quot;))
+
+# Train the Naive Bayes model
+naive_bayes_model &lt;- naiveBayes(FTR ~ HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)
+
+# Summary of the model
+print(naive_bayes_model)</code></pre>
+<pre><code>## 
+## Naive Bayes Classifier for Discrete Predictors
+## 
+## Call:
+## naiveBayes.default(x = X, y = Y, laplace = laplace)
+## 
+## A-priori probabilities:
+## Y
+##  Home Win  Away Win      Draw 
+## 0.4688500 0.2802265 0.2509234 
+## 
+## Conditional probabilities:
+##           HST
+## Y              [,1]     [,2]
+##   Home Win 5.920693 2.642972
+##   Away Win 3.792619 2.171426
+##   Draw     4.174681 2.258124
+## 
+##           AST
+## Y              [,1]     [,2]
+##   Home Win 3.039916 1.893231
+##   Away Win 5.184534 2.305446
+##   Draw     3.466143 1.926341
+## 
+##           HF
+## Y              [,1]     [,2]
+##   Home Win 13.80672 4.446853
+##   Away Win 14.14323 4.258744
+##   Draw     13.95191 4.209476
+## 
+##           AF
+## Y              [,1]     [,2]
+##   Home Win 13.78834 4.223505
+##   Away Win 13.67311 4.507045
+##   Draw     13.92247 4.343873
+## 
+##           HC
+## Y              [,1]     [,2]
+##   Home Win 5.577206 2.798980
+##   Away Win 5.740773 2.942206
+##   Draw     5.759568 3.093515
+## 
+##           AC
+## Y              [,1]     [,2]
+##   Home Win 4.377626 2.543111
+##   Away Win 4.269772 2.401293
+##   Draw     4.359176 2.542476
+## 
+##           HY
+## Y              [,1]     [,2]
+##   Home Win 2.273634 1.498368
+##   Away Win 2.579086 1.468335
+##   Draw     2.560353 1.490981
+## 
+##           AY
+## Y              [,1]     [,2]
+##   Home Win 2.619223 1.493890
+##   Away Win 2.616872 1.592903
+##   Draw     2.741904 1.530669
+## 
+##           HR
+## Y                [,1]      [,2]
+##   Home Win 0.06932773 0.2681643
+##   Away Win 0.21177504 0.4497260
+##   Draw     0.13248283 0.3505746
+## 
+##           AR
+## Y                [,1]      [,2]
+##   Home Win 0.18014706 0.4271461
+##   Away Win 0.08787346 0.2953951
+##   Draw     0.16094210 0.3909656</code></pre>
 </div>
 
 
