@@ -28,7 +28,7 @@ for (req in requirements){
 
 # Analysis Description
 
-This analysis focuses on building and evaluating predictive models using logistic regression and Naive Bayes for the dataset. The dataset comprises training and testing data that was splitted in the previous stage. Logistic regression is employed to predict outcomes based on a set of predictor variables. The objective is to assess the predictive performance of the models and evaluate their ability to classify outcomes accurately.
+This analysis focuses on building and evaluating predictive models using logistic regression and Naive Bayes for the dataset. The dataset comprises training and testing data that was splitted in the previous stage. Logistic regression and Naive Bayes is employed to predict outcomes based on a set of predictor variables. The objective is to assess the predictive performance of the models and evaluate their ability to classify outcomes accurately.
 
 # Loading data
 
@@ -45,236 +45,72 @@ cat("Testing data dimensions:", dim(test_data), "\n")
 The logistic regression analysis involves two main stages: model building and evaluation. In the model-building stage, logistic regression models are trained using the training dataset. Two models are considered: one with all variables and another with only relevant variables. The significance of each predictor variable is assessed based on the model summary and p-values.
 
 ```{r}
-# Defining reference level as "Draw"
+# Relevel reference level as "Draw"
 train_data$FTR <- relevel(factor(train_data$FTR), ref = "Draw")
 
-# Load required package
-require(nnet)
+library(nnet)
 
-# Model with all variables
-multinom.model_1 <- multinom(FTR ~ HST + AST + HF + AF + HC + AC + HY + AY + HR + AR + 1, data = train_data)
-summary(multinom.model_1)
+# Fit initial model
+multinom_model <- multinom(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)
 
-# Calculate p-values
-summary <- summary(multinom.model_1)$coefficients / summary(multinom.model_1)$standard.errors
-p <- (1 - pnorm(abs(summary), 0, 1)) * 2
-head(p)
-
-# Model with only relevant variables
-multinom.model_2 <- multinom(FTR ~ AST + HST + AF + HC + AC + HR + AR + 1, data = train_data)
-summary(multinom.model_2)
-
-# Calculate p-values
-summary <- summary(multinom.model_2)$coefficients / summary(multinom.model_2)$standard.errors
-p <- (1 - pnorm(abs(summary), 0, 1)) * 2
-head(p)
-
-# Odds ratio
-exp(coef(multinom.model_2))
-
-# Rename the model
-multinom.model <- multinom.model_2
+# Summary
+summary(multinom_model)
 
 ```
 
-## Prediction on test data
+### Key Findings:
+
+- **Half-Time Goals**:
+  - **HTHG** (Half-Time Home Team Goals) significantly influences match outcomes and is especially important for predicting **Home Wins**.
+  - **HTAG** (Half-Time Away Team Goals) is more important for predicting **Away Wins**.
+
+- **Half-Time Result (HTR)**:
+  - **HTR** (Half-Time Result) plays an important role in determining match outcomes, particularly predicting **Home Wins** and **Away Wins** based on the halftime result.
+
+- **Shots on Target**:
+  - **HST** (Home Shots on Target) is significant for predicting **Home Wins**, where more shots on target decrease the likelihood of an **Away Win**.
+  - **AST** (Away Shots on Target) is significant for predicting **Away Wins**, with more shots on target increasing the likelihood of an **Away Win**.
+
+- **Red Cards**:
+  - **HR** (Home Red Cards) has a significant positive effect on **Home Wins**. More home red cards increase the likelihood of a **Home Win**.
+  
+  - **AR** (Away Red Cards) has a minor effect on **Home Wins**, suggesting it has a slight influence on match outcomes.
+
+- **Other Match Statistics**:
+  - Most other match statistics, such as **Fouls**, **Yellow Cards**, and **Corners**, show smaller or no significant effects on match outcomes.
+
+### Checking Multicollinearity
 
 ```{r}
-# Prediction on test data
-test_output <- test_data
-test_output$Predicted <- predict(multinom.model, newdata = test_output, "class")
-test_output <- test_output[c(1:4, 17)]
-names(test_output)[4] <- "Actual"
-
-# Save prediction output as CSV file
-write.csv(test_output, "./testing/logistic-regression-output.csv", row.names = FALSE)
-
+vif(multinom_model)
 ```
+
+The HTR (Half-Time Result) variable has a high VIF of 49.97. Also, HS and AS have a VIF of more than 16 , suggesting significant multicollinearity with other predictors in the model. So, lets check mullticollinearity by removing it.
 
 ```{r}
-# Convert predicted and actual values to factors with two levels
-predicted_factor <- factor(test_output$Predicted, levels = c("Home Win", "Away Win"))
-actual_factor <- factor(test_data$FTR, levels = c("Home Win", "Away Win"))
-
-# Model Evaluation: Confusion Matrix and Evaluation Metrics
-conf_matrix <- confusionMatrix(predicted_factor, actual_factor)
-
-# Display the confusion matrix and evaluation metrics
-print(conf_matrix$table)
-cat("Overall Accuracy:", conf_matrix$overall['Accuracy'], "\n")
-cat("Sensitivity:", conf_matrix$byClass['Sensitivity'], "\n")
-cat("Specificity:", conf_matrix$byClass['Specificity'], "\n")
-
-# ROC Curve and AUC Calculation
-library(pROC)
-roc_curve <- roc(actual_factor, as.numeric(predicted_factor == "Home Win"))
-auc <- auc(roc_curve)
-
-# Plot ROC curve
-plot(roc_curve, main = "ROC Curve")
-abline(a = 0, b = 1, lty = 2, col = "gray")
-cat("AUC:", auc, "\n")
+multinom_model.clean <- update(multinom_model, .~.-HTR -HS -AS)
+vif(multinom_model.clean)
 
 ```
 
-Accuracy represents the proportion of correct predictions among all predictions made by the model. In this context, an accuracy of approximately 80.73% suggests that the model correctly predicts the outcome (Home Win, Away Win, or Draw) for about 80.73% of matches in the test dataset.
-
-Sensitivity measures the proportion of actual positive cases (Home Wins or Away Wins) that are correctly identified by the model. A sensitivity of approximately 88.14% indicates that the model performs well in predicting Home Wins and Away Wins when they occur, capturing about 88.14% of these cases.
-
-Specificity measures the proportion of actual negative cases (Draws) that are correctly identified by the model. A specificity of approximately 68.11% indicates that the model accurately identifies Draw outcomes when they do not occur, capturing about 68.11% of these cases.
-
-The ROC curve illustrates the trade-off between sensitivity and specificity across different thresholds for classifying outcomes. The AUC quantifies the overall performance of the model in distinguishing between different classes. An AUC of approximately 78.12% suggests that the model has a moderate level of discrimination ability, with higher values indicating better discrimination between classes.
-
-## Evaluating the model 
+After removing HTR, HS, and AS from the model, the VIF results show improved multicollinearity for the remaining variables except AF and HF. So, removing AF and HF too.
 
 ```{r}
-# Building confusion matrix
-install.packages('e1071', dependencies = TRUE)
-install.packages('yardstick')
+multinom_model.clean <- update(multinom_model.clean, .~.-HF -AF)
+vif(multinom_model.clean)
 
-library(caret) 
-library(yardstick)
-
-observations <- factor(test_output$Actual, levels = c("Home Win", "Away Win", "Draw"))
-predicted <- factor(test_output$Predicted, levels = c("Home Win", "Away Win", "Draw"))
-
-conf <- table(predicted, observations)
-
-f.conf <- confusionMatrix(conf)
-
-library(ggplot2)
-
-mat_conf <- data.frame(
-  FTR = sample(0:1, nrow(test_output), replace = TRUE),
-  predicted = sample(0:1, nrow(test_output), replace = TRUE)
-)
-mat_conf$FTR <- observations
-mat_conf$predicted <- predicted
-
-cm <- conf_mat(mat_conf, FTR, predicted)
-
-# Visualize confusion matrix
-autoplot(cm, type = "heatmap") +
-  scale_fill_gradient(low = "firebrick1", high = "aquamarine1")
-
-print(f.conf)
 ```
 
-Here's a breakdown of the interpretation:
-
-Accuracy: The model correctly predicts the outcome for approximately 60.24% of matches.
-
-Sensitivity: The model’s ability to correctly identify Home Wins (H) is approximately 82.58%, and its ability to correctly identify Away Wins (A) is approximately 63.06%. However, it performs poorly in predicting Draws (D) with a sensitivity of approximately 15.166%.
-
-Specificity: The model has high specificity for Away Wins (A) and Draws (D), indicating its ability to accurately identify these outcomes when they do not occur. The specificity for Home Wins is 57.56%, for Away Wins is approximately 83.03%, and for Draws, it’s approximately 93.270%.
-
-Precision: The precision for Home Wins (H), Away Wins (A), and Draws (D) is approximately 63.31%, 59.05%, and 42.953%, respectively. This indicates the proportion of correct predictions among the predicted instances of each class.
-
-Balanced Accuracy: The overall balanced accuracy of the model is approximately 70.07% for the Home Wins 73.04% for Away Wins and 54.21% for Draws, which considers the sensitivity and specificity for each class and provides a more comprehensive measure of the model’s performance.
-
-Overall, while the model performs reasonably well in predicting Home Wins and Away Wins, it struggles to accurately predict Draws.
-
-## Saving the Model
+Let’s see the summary of the updated cleaned model.
 
 ```{r}
-# Save the model object to a file
-saveRDS(multinom.model, "./model/model_file.rds")
+summary(multinom_model.clean)
 ```
 
-# Naive Bayes
-
-In this section, we'll apply the Naive Bayes algorithm to the dataset. We'll first train the model using the training data and assess its performance.
+Compare the AIC for the two models.
 
 ```{r}
-# Load required package
-require(e1071)
-
-# Convert target variable (FTR) to factor
-train_data$FTR <- factor(train_data$FTR, levels = c("Home Win", "Away Win", "Draw"))
-
-# Train the Naive Bayes model
-naive_bayes_model <- naiveBayes(FTR ~ HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)
-
-# Summary of the model
-print(naive_bayes_model)
+AIC(multinom_model, multinom_model.clean) %>% arrange(AIC)
 ```
 
-## Prediction on Test Data
-
-Now that we have trained the Naive Bayes model, we can use it to predict the outcomes for the test dataset.
-
-```{r}
-# Prediction on test data
-test_output <- test_data
-test_output$Predicted <- predict(naive_bayes_model, newdata = test_output)
-test_output <- test_output[c(1:4, 17)]
-names(test_output)[4] <- "Actual"
-
-# Save prediction output as CSV file
-write.csv(test_output, "./testing/naive-bayes-output.csv", row.names = FALSE)
-```
-
-## Model Evaluation
-
-We'll now assess the model's performance using a confusion matrix and other evaluation metrics.
-
-```{r}
-# Convert predicted and actual values to factors
-predicted_factor <- factor(test_output$Predicted, levels = c("Home Win", "Away Win", "Draw"))
-actual_factor <- factor(test_data$FTR, levels = c("Home Win", "Away Win", "Draw"))
-
-# Model Evaluation: Confusion Matrix and Evaluation Metrics
-conf_matrix <- confusionMatrix(predicted_factor, actual_factor)
-
-# ROC Curve and AUC Calculation
-library(pROC)
-roc_curve <- roc(actual_factor, as.numeric(predicted_factor == "Home Win"))
-auc <- auc(roc_curve)
-
-# Plot ROC curve
-plot(roc_curve, main = "ROC Curve")
-abline(a = 0, b = 1, lty = 2, col = "gray")
-cat("AUC:", auc, "\n")
-```
-
-## Evaluating the Model
-
-```{r}
-# Building confusion matrix
-install.packages('e1071', dependencies = TRUE)
-install.packages('yardstick')
-
-library(caret)
-library(yardstick)
-
-observations <- factor(test_output$Actual, levels = c("Home Win", "Away Win", "Draw"))
-predicted <- factor(test_output$Predicted, levels = c("Home Win", "Away Win", "Draw"))
-
-conf <- table(predicted, observations)
-
-f.conf <- confusionMatrix(conf)
-
-library(ggplot2)
-
-mat_conf <- data.frame(
-  FTR = sample(0:1, nrow(test_output), replace = TRUE),
-  predicted = sample(0:1, nrow(test_output), replace = TRUE)
-)
-mat_conf$FTR <- observations
-mat_conf$predicted <- predicted
-
-cm <- conf_mat(mat_conf, FTR, predicted)
-
-# Visualize confusion matrix
-autoplot(cm, type = "heatmap") +
-  scale_fill_gradient(low = "firebrick1", high = "aquamarine1")
-
-print(f.conf)
-```
-
-## Saving the Model
-
-```{r}
-# Save the model object to a file
-saveRDS(naive_bayes_model, "./model/naive_bayes_model_file.rds")
-```
+The cleaned model appears to have a higher AIC thus up to now we prefer the full initial model. Lower AIC indicates a better fit, so multinom_model is the preferred model between the two in terms of fit. multinom_model.clean has fewer predictors (22 degrees of freedom vs 34) but results in a higher AIC, suggesting it may have sacrificed model complexity without improving fit sufficiently.
