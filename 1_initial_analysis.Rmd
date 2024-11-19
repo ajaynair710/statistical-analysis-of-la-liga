@@ -1,7 +1,7 @@
 ---
 title: "1_initial_analysis"
 author: "Ajay Prakash Nair"
-date: "2024-10-23"
+date: "2024-10-24"
 output: html_document
 ---
 
@@ -341,7 +341,7 @@ interactive_plot
 
 # Input Data preparation (removing multicollinear variables)
 
-##Prepare the Correlation Matrix
+## Prepare the Correlation Matrix
 
 ```{r}
 # Display the structure of football_data
@@ -390,7 +390,7 @@ This step involves identifying and removing multicollinear variables from the da
 
 ```{r}
 # Select columns for input data
-input_data <- football_data[c(1:3, 6, 9, 11:21)]
+input_data <- football_data[c(1:3, 6:21)]
 ```
 
 # Split Data into Training and Testing Sets
