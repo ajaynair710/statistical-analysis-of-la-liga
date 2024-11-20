@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Requirements
 
 ```{r requirements, results='hide'}
-requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret")
+requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret", "gridExtra", "effects")
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
@@ -114,3 +114,90 @@ AIC(multinom_model, multinom_model.clean) %>% arrange(AIC)
 ```
 
 The cleaned model appears to have a higher AIC thus up to now we prefer the full initial model. Lower AIC indicates a better fit, so multinom_model is the preferred model between the two in terms of fit. multinom_model.clean has fewer predictors (22 degrees of freedom vs 34) but results in a higher AIC, suggesting it may have sacrificed model complexity without improving fit sufficiently.
+
+## Interaction Terms
+
+We are adding the following interaction terms : 
+HTHG × HTAG: Home half-time goals × Away half-time goals
+HST × AST: Home shots on target × Away shots on target
+HR × AR: Home red cards × Away red cards
+HY × AY: Home yellow cards × Away yellow cards
+
+```{r}
+multinom_model.inter <- update(multinom_model, 
+                         . ~ . + HTHG:HTAG + HST:AST + HR:AR + HY:AY)
+
+summary(multinom_model.inter)
+
+```
+
+HST:AST, HY:AY appear to be not so much significant. So removing it.
+
+```{r}
+multinom_model.inter <- update(multinom_model.inter, . ~ . -HST:AST -HY:AY)
+summary(multinom_model.inter)
+```
+
+Let's check the AIC
+
+```{r}
+AIC(multinom_model, multinom_model.clean, multinom_model.inter) %>% arrange(AIC)
+```
+
+By looking at the AIC the best model remain the initial full model. Now let’s try adding interaction terms to the clean model. Now let’s add the following interactions:
+
+HTHG × HTAG: Home half-time goals × Away half-time goals
+HST × AST: Home shots on target × Away shots on target
+HR × AR: Home red cards × Away red cards
+HY × AY: Home yellow cards × Away yellow cards
+
+```{r}
+multinom_model.clean.inter <- update(multinom_model.clean, 
+                         . ~ . + HTHG:HTAG + HST:AST + HR:AR + HY:AY)
+
+summary(multinom_model.clean.inter)
+
+```
+
+```{r}
+AIC(multinom_model, multinom_model.inter, multinom_model.clean, multinom_model.clean.inter) %>% arrange(AIC)
+```
+
+And it seems like that the full model is just slightly better with respect to the full model with interaction terms.
+
+## Model Interpretation
+
+We have decided to interpret the model multinom_model based on its lower AIC value (5860.762), which suggests that it provides the best balance between fit and complexity.
+
+To begin the interpretation, we recall the model’s summary:
+
+```{r}
+summary(multinom_model)
+```
+
+```{r}
+# Plot the effects for 4 interactionless variables from the multinom_model
+
+# Plot for HTHG (Home Team Home Goals)
+a <- effect("HTHG", multinom_model)
+plot(a, rescale.axis = FALSE, ylab = "Probability of FTR")
+
+# Plot for HTAG (Home Team Away Goals)
+b <- effect("HTAG", multinom_model)
+plot(b, rescale.axis = FALSE, ylab = "Probability of FTR")
+
+# Plot for HST (Home Team Shots)
+c <- effect("HST", multinom_model)
+plot(c, rescale.axis = FALSE, ylab = "Probability of FTR")
+
+# Plot for AST (Away Team Shots)
+d <- effect("AST", multinom_model)
+plot(d, rescale.axis = FALSE, ylab = "Probability of FTR")
+
+```
+
+As we can see, if Half Time Home Team Goals (HTHG) are greater than 3, the probability of the home team winning is 1; if Half Time Away Goals (HTAG) are greater than 2, the probability of the away team winning is more than 50%; if the Home Team Shots on Target (HST) are greater than 10, the probability of the home team winning is high; and if the Away Team Shots on Target (AST) are greater than 10, the probability of the away team winning is high.
+
+## Model Comparison
+
+Let’s compare all the models done so far in terms of prediction power to be able to compare them with other types of models:
