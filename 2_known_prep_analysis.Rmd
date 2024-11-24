@@ -255,3 +255,49 @@ roc_multinom_model.clean.inter <- roc(test_data$FTR ~ prob_multinom_model.clean.
 ```
 
 By the plots we can see that the Area Under the Curve (AUC) computed by the ROC curves gives almost the same results.
+
+Now we extract from each roc object the best threshold in order to use it during predictions.
+
+```{r}
+# Extract best thresholds and metrics for each ROC object
+roc_metrics_full <- coords(roc_multinom_model, x = "best", ret = "all")
+roc_metrics_full_inter <- coords(roc_multinom_model.inter, x = "best", ret = "all")
+roc_metrics_clean <- coords(roc_multinom_model.clean, x = "best", ret = "all")
+roc_metrics_clean_inter <- coords(roc_multinom_model.clean.inter, x = "best", ret = "all")
+```
+
+Rename the single row for each dataframe and concatenate all in a single one.
+
+```{r}
+# Rename rows to identify models
+row.names(roc_metrics_full) <- "Full Model"
+row.names(roc_metrics_full_inter) <- "Interaction Full Model"
+row.names(roc_metrics_clean) <- "Cleaned Model"
+row.names(roc_metrics_clean_inter) <- "Interaction Cleaned Model"
+
+# Combine all metrics into a single dataframe
+roc_results <- rbind(
+  roc_metrics_full,
+  roc_metrics_full_inter,
+  roc_metrics_clean,
+  roc_metrics_clean_inter
+)
+```
+
+Now we make a comparisons result: 
+
+1. Specificity
+
+```{r}
+library(dplyr)
+eme_results_df <- as.data.frame(roc_results)
+
+# Select and arrange specificity
+specificity_comparison <- eme_results_df %>%
+  dplyr::select(specificity) %>%
+  dplyr::arrange(desc(specificity))
+
+# View the results
+print(specificity_comparison)
+```
+In terms of specificity the best model is the Interaction Full Model.
