@@ -226,9 +226,32 @@ roc_multinom_model.clean.inter <- multiclass.roc(true_labels, pred_multinom_mode
 ```
 
 ```{r}
-# Set up a 2x2 plotting layout
+# Load required libraries
+library(pROC)
+library(caret)
+
+# Compute probabilities for each model
+prob_multinom_model <- predict(multinom_model, test_data, type = "prob")
+prob_multinom_model.inter <- predict(multinom_model.inter, test_data, type = "prob")
+prob_multinom_model.clean <- predict(multinom_model.clean, test_data, type = "prob")
+prob_multinom_model.clean.inter <- predict(multinom_model.clean.inter, test_data, type = "prob")
+
+# Set up the 2x2 plotting area
 par(mfrow = c(2, 2))
 
-# Plot ROC curve for the multinom_model
-plot(roc_multinom_model, col = "blue", lwd = 2, main = "ROC - Multinom Model", print.auc = TRUE)
+# Plot ROC curve for each model with AUC
+roc_multinom_model <- roc(test_data$FTR ~ prob_multinom_model[,1], plot = TRUE, 
+                          print.auc = TRUE, main = "multinom_model ROC Curve")
+
+roc_multinom_model.inter <- roc(test_data$FTR ~ prob_multinom_model.inter[,1], plot = TRUE, 
+                                 print.auc = TRUE, main = "multinom_model.inter ROC Curve")
+
+roc_multinom_model.clean <- roc(test_data$FTR ~ prob_multinom_model.clean[,1], plot = TRUE, 
+                                 print.auc = TRUE, main = "multinom_model.clean ROC Curve")
+
+roc_multinom_model.clean.inter <- roc(test_data$FTR ~ prob_multinom_model.clean.inter[,1], plot = TRUE, 
+                                       print.auc = TRUE, main = "multinom_model.clean.inter ROC Curve")
+
 ```
+
+By the plots we can see that the Area Under the Curve (AUC) computed by the ROC curves gives almost the same results.
