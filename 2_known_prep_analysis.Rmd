@@ -205,24 +205,6 @@ Let’s compare all the models done so far in terms of prediction power to be ab
 ```{r}
 # Load the test dataset
 test_data <- read.csv("testing/test.csv")
-
-pred_multinom_model <- predict(multinom_model, test_data, type = "prob")
-pred_multinom_model.inter <- predict(multinom_model.inter, test_data, type = "prob")
-pred_multinom_model.clean <- predict(multinom_model.clean, test_data, type = "prob")
-pred_multinom_model.clean.inter <- predict(multinom_model.clean.inter, test_data, type = "prob")
-```
-
-Select the best threshold via ROC curve:
-
-```{r}
-# Define the true labels
-true_labels <- test_data$FTR
-
-# Compute ROC and AUC for each model
-roc_multinom_model <- multiclass.roc(true_labels, pred_multinom_model[,2])
-roc_multinom_model.inter <- multiclass.roc(true_labels, pred_multinom_model.inter)
-roc_multinom_model.clean <- multiclass.roc(true_labels, pred_multinom_model.clean)
-roc_multinom_model.clean.inter <- multiclass.roc(true_labels, pred_multinom_model.clean.inter)
 ```
 
 ```{r}
@@ -325,3 +307,56 @@ print(accuracy_comparison)
 ```
 
 And finally for the accuracy measure the best model is the Interaction Full Model.
+
+Also, we can see that the response is unbalanced.
+
+### Confusion Matrixes
+
+Let’s have a quick look on the confusion matrix for the four model that we have specified.
+
+```{r}
+# Extract the thresholds from the ROC metrics
+threshold_full <- roc_metrics_full$threshold
+threshold_full_inter <- roc_metrics_full_inter$threshold
+threshold_clean <- roc_metrics_clean$threshold
+threshold_clean_inter <- roc_metrics_clean_inter$threshold
+
+# For multinomial classification, select the class with the highest probability
+pred_full <- apply(prob_multinom_model, 1, function(x) which.max(x))
+pred_full_inter <- apply(prob_multinom_model.inter, 1, function(x) which.max(x))
+pred_clean <- apply(prob_multinom_model.clean, 1, function(x) which.max(x))
+pred_clean_inter <- apply(prob_multinom_model.clean.inter, 1, function(x) which.max(x))
+```
+
+1. Full Model 
+
+```{r}
+# Create confusion matrices
+conf_matrix_full <- table(pred = pred_full, true = as.factor(test_data$FTR))
+cat("Full Model Confusion Matrix:\n")
+print(conf_matrix_full)
+```
+
+2. Interaction Full Model
+
+```{r}
+conf_matrix_full_inter <- table(pred = pred_full_inter, true = as.factor(test_data$FTR))
+cat("Interaction Full Model Confusion Matrix:\n")
+print(conf_matrix_full_inter)
+```
+
+3. Cleaned Model
+
+```{r}
+conf_matrix_clean <- table(pred = pred_clean, true = as.factor(test_data$FTR))
+cat("Cleaned Model Confusion Matrix:\n")
+print(conf_matrix_clean)
+```
+
+4. Interaction Cleaned Model
+
+```{r}
+conf_matrix_clean_inter <- table(pred = pred_clean_inter, true = as.factor(test_data$FTR))
+cat("Interaction Cleaned Model Confusion Matrix:\n")
+print(conf_matrix_clean_inter)
+```
