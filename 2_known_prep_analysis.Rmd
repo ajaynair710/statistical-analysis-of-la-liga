@@ -290,14 +290,38 @@ Now we make a comparisons result:
 
 ```{r}
 library(dplyr)
-eme_results_df <- as.data.frame(roc_results)
+roc_results_df <- as.data.frame(roc_results)
 
 # Select and arrange specificity
-specificity_comparison <- eme_results_df %>%
+specificity_comparison <- roc_results_df %>%
   dplyr::select(specificity) %>%
   dplyr::arrange(desc(specificity))
 
 # View the results
 print(specificity_comparison)
 ```
+
 In terms of specificity the best model is the Interaction Full Model.
+
+2. Sensitivity
+```{r}
+sensitivity_comparison <- roc_results_df %>%
+  dplyr::select(sensitivity) %>%
+  dplyr::arrange(desc(sensitivity))
+
+print(sensitivity_comparison)
+```
+
+Regarding the sensitivity the best model is the Cleaned Model.
+
+3. Accuracy 
+
+```{r}
+accuracy_comparison <- roc_results_df %>%
+  dplyr::select(accuracy) %>%
+  dplyr::arrange(desc(accuracy))
+
+print(accuracy_comparison)
+```
+
+And finally for the accuracy measure the best model is the Interaction Full Model.
