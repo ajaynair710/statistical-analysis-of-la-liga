@@ -480,3 +480,29 @@ Again like before we take as λ value corresponding to one standard error from t
 model_bestlam.lasso <- modelcv.lasso$lambda.1se
 model_bestlam.lasso
 ```
+
+Like before, now visualize again the lasso estimates as a function of the logarithm of λ and add a vertical line corresponding to best.lambda:
+
+```{r}
+plot(model_fit.lasso)
+abline(v = log(model_bestlam.lasso), lwd = 1.2, lty = "dashed")
+```
+
+These are the coefficients:
+
+```{r}
+# Extract coefficients at the best lambda
+model_bestlam.lasso.coef <- coef(model_fit.lasso, s = model_bestlam.lasso)
+
+# Handle potential list or sparse matrix cases
+if (is.list(model_bestlam.lasso.coef)) {
+  coef_matrix <- as.matrix(model_bestlam.lasso.coef[[1]])
+} else {
+  coef_matrix <- as.matrix(model_bestlam.lasso.coef)
+}
+
+# Filter non-zero coefficients
+nonzero_coefs <- coef_matrix[coef_matrix != 0, , drop = FALSE]
+print(nonzero_coefs)
+
+```
