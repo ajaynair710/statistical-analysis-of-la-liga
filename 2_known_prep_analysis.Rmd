@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Requirements
 
 ```{r requirements, results='hide'}
-requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret", "gridExtra", "effects")
+requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret", "gridExtra", "effects", "nnet")
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
@@ -359,4 +359,124 @@ print(conf_matrix_clean)
 conf_matrix_clean_inter <- table(pred = pred_clean_inter, true = as.factor(test_data$FTR))
 cat("Interaction Cleaned Model Confusion Matrix:\n")
 print(conf_matrix_clean_inter)
+```
+
+## Model Selection
+
+Now let’s apply automatic model selection to identity the best model.
+
+```{r}
+# Load libraries
+install.packages("MASS")
+install.packages("nnet")
+library(MASS)
+library(nnet)
+
+# Fit a full multinomial model
+full_model <- multinom(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = test_data)
+
+# Apply stepwise selection
+stepwise_model <- stepAIC(full_model, direction = "both", trace = 1)
+
+# View the summary of the stepwise selected model
+summary(stepwise_model)
+```
+
+```{r}
+# Calculate AIC for each model
+aic_full <- AIC(multinom_model)
+aic_full_inter <- AIC(multinom_model.inter)
+aic_clean <- AIC(multinom_model.clean)
+aic_clean_inter <- AIC(multinom_model.clean.inter)
+aic_stepwise <- AIC(stepwise_model)
+
+# Create a data frame with the models and their AIC values
+aic_results <- data.frame(
+  Model = c("Full Model", "Interaction Full Model", "Cleaned Model", "Interaction Cleaned Model", "Stepwise Model"),
+  AIC = c(aic_full, aic_full_inter, aic_clean, aic_clean_inter, aic_stepwise)
+)
+
+# Arrange the models by AIC (ascending order)
+aic_results_sorted <- aic_results %>% arrange(AIC)
+
+# Print the sorted AIC results
+print(aic_results_sorted)
+```
+
+In terms of AIC the “Step model” is better.
+
+```{r}
+# Get the predicted probabilities for the stepwise model
+prob_stepwise <- predict(stepwise_model, test_data, type = "prob")
+
+# Define true labels for the ROC curve
+true_labels <- test_data$FTR  # Adjust if needed
+
+# Plot the ROC curve for the stepwise model
+roc_stepwise <- roc(true_labels, prob_stepwise[,1], plot = TRUE, print.auc = TRUE, main = "Stepwise Model ROC Curve")
+```
+
+```{r}
+# Convert probabilities into class predictions by selecting the class with the highest probability
+pred_stepwise_multiclass <- apply(prob_stepwise, 1, function(x) which.max(x)) 
+
+```
+
+```{r}
+# Create confusion matrix for the Stepwise Model
+conf_matrix_stepwise <- table(pred = pred_stepwise_multiclass, true = as.factor(test_data$FTR))
+
+# Print the confusion matrix
+cat("Stepwise Model Confusion Matrix:\n")
+print(conf_matrix_stepwise)
+
+```
+
+### Lasso Regression
+
+```{r}
+# Convert predictors to a matrix
+x <- model.matrix(FTR ~ ., data = train_data)[, -1]  # Exclude the intercept
+
+# Response variable
+y <- train_data$FTR  # Ensure this is a factor for multinomial classification
+
+# Fit LASSO regression model
+model_fit.lasso <- glmnet(
+  x, 
+  y, 
+  family = "multinomial",  # Corrected the argument
+  alpha = 1  # LASSO regularization
+)
+
+# Plot the LASSO model
+plot(model_fit.lasso, xvar = "lambda", label = TRUE)
+
+```
+
+We choose lambda using cross validation:
+
+```{r}
+modelcv.lasso <- cv.glmnet(
+  x, 
+  y, 
+  alpha = 1,  # LASSO penalty
+  family = "multinomial"  # Multinomial classification
+)
+
+# Plot cross-validation results
+plot(modelcv.lasso)
+```
+
+The value of λ that minimizes the ridge cross-validated mean square error is:
+
+```{r}
+modelcv.lasso$lambda.min
+```
+
+Again like before we take as λ value corresponding to one standard error from the minimum of the cross-validated mean square error:
+
+```{r}
+model_bestlam.lasso <- modelcv.lasso$lambda.1se
+model_bestlam.lasso
 ```
