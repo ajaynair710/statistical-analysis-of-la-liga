@@ -506,3 +506,78 @@ nonzero_coefs <- coef_matrix[coef_matrix != 0, , drop = FALSE]
 print(nonzero_coefs)
 
 ```
+
+Now we apply prediction on the test set.
+
+```{r}
+# Use the same formula as training data
+x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
+
+# Check dimensions of x and x_test
+print(dim(x))
+print(dim(x_test))
+
+test_data$FTR <- factor(test_data$FTR, levels = levels(train_data$FTR))
+
+# Match test_data columns to training data
+x_test <- model.matrix(FTR ~ ., data = test_data, xlev = attr(x, "assign"))[, -1]
+
+# Identify missing columns
+missing_cols <- setdiff(colnames(x), colnames(x_test))
+for (col in missing_cols) {
+  x_test <- cbind(x_test, 0)  # Add a column with all zeros
+  colnames(x_test)[ncol(x_test)] <- col
+}
+
+# Ensure column order matches
+x_test <- x_test[, colnames(x)]
+
+test_data$FTR <- factor(test_data$FTR, levels = levels(train_data$FTR))
+
+# Repeat for other factor predictors:
+for (col in names(test_data)) {
+  if (is.factor(test_data[[col]])) {
+    test_data[[col]] <- factor(test_data[[col]], levels = levels(train_data[[col]]))
+  }
+}
+
+# Predict probabilities for each class using the best lambda
+model_fit.lasso.prob <- predict(
+  model_fit.lasso, 
+  s = model_bestlam.lasso, 
+  newx = x_test, 
+  type = "response"
+)
+
+```
+
+```{r}
+# Remove the third dimension
+prob_matrix <- model_fit.lasso.prob[, , 1]
+
+# Create an empty list to store ROC curves
+roc_curves <- list()
+
+# Loop over each class to calculate and plot the ROC curve
+for (class in colnames(prob_matrix)) {
+  # Create binary response for the current class
+  binary_response <- ifelse(test_data$FTR == class, 1, 0)
+  
+  # Access probabilities for the current class
+  class_probs <- prob_matrix[, class]
+  
+  # Compute the ROC curve
+  roc_curve <- roc(binary_response, class_probs)
+  roc_curves[[class]] <- roc_curve
+  
+  # Plot ROC curve for this class
+  plot.roc(
+    roc_curve, 
+    main = paste("ROC Curve - Class", class), 
+    col = which(colnames(prob_matrix) == class), 
+    lwd = 2,
+    print.auc = TRUE  # Display AUC on the plot
+  )
+}
+
+```
