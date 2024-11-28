@@ -576,8 +576,59 @@ for (class in colnames(prob_matrix)) {
     main = paste("ROC Curve - Class", class), 
     col = which(colnames(prob_matrix) == class), 
     lwd = 2,
-    print.auc = TRUE  # Display AUC on the plot
+    print.auc = TRUE
   )
+}
+
+```
+
+```{r}
+# Load necessary library
+library(pROC)
+
+# Remove the third dimension
+prob_matrix <- model_fit.lasso.prob[, , 1]
+
+# Create an empty list to store ROC curves
+roc_curves <- list()
+
+# Loop over each class to calculate and plot the ROC curve
+for (class in colnames(prob_matrix)) {
+  # Create binary response for the current class
+  binary_response <- ifelse(test_data$FTR == class, 1, 0)
+  
+  # Access probabilities for the current class
+  class_probs <- prob_matrix[, class]
+  
+  # Compute the ROC curve
+  roc_curve <- roc(binary_response, class_probs)
+  roc_curves[[class]] <- roc_curve
+  
+  # Plot ROC curve for this class
+  plot.roc(
+    roc_curve, 
+    main = paste("ROC Curve - Class", class), 
+    col = which(colnames(prob_matrix) == class), 
+    lwd = 2,
+    print.auc = TRUE
+  )
+  
+  # Calculate sensitivity, specificity, and accuracy
+  thresholds <- coords(roc_curve, "best", ret = c("threshold", "sensitivity", "specificity"), best.method = "closest.topleft")
+  
+  # Print metrics
+  cat("Class:", class, "\n")
+  cat("Threshold:", thresholds$threshold, "\n")
+  cat("Sensitivity:", thresholds$sensitivity, "\n")
+  cat("Specificity:", thresholds$specificity, "\n")
+  
+  # Calculate predicted classes based on the highest probability
+  predicted_classes <- apply(prob_matrix, 1, which.max)  # Get the index of the max probability
+  actual_classes <- as.numeric(factor(test_data$FTR, levels = colnames(prob_matrix)))  # Convert actual classes to numeric
+  
+  # Calculate accuracy
+  accuracy <- mean(predicted_classes == actual_classes)
+  cat("Accuracy:", accuracy, "\n\n")
 }
 
 ```
