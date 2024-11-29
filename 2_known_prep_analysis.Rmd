@@ -720,16 +720,6 @@ for (class in levels(y_test)) {
 ```
 
 ```{r}
-# Make predictions on the test set
-model_fit.ridge.pred <- predict(model_fit.ridge, s = modelcv_bestlam.ridge, 
-                                 newx = x_test, type = "response")
-
-# Prepare the response variable
-y_test <- factor(test_data$FTR, levels = levels(train_data$FTR))
-
-# Check the structure of the predictions
-str(model_fit.ridge.pred)
-
 # Extract the predicted probabilities for each class
 predicted_classes <- apply(model_fit.ridge.pred, 1, which.max)  # Get the index of the max probability
 predicted_classes <- levels(y_test)[predicted_classes]  # Convert indices to class labels
