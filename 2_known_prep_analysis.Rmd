@@ -687,31 +687,91 @@ model_fit.ridge.pred <- predict(model_fit.ridge, s = modelcv_bestlam.ridge,
 # Check the structure of the predictions
 str(model_fit.ridge.pred)
 
-# If it's a single vector, you can use it directly
-if (is.vector(model_fit.ridge.pred)) {
-    # If it's a binary classification, you might want to convert it to a factor
-    model_fit.ridge.pred <- as.numeric(model_fit.ridge.pred > 0.5)  # Assuming 0.5 is the threshold
-}
-
 # Prepare the response variable
 y_test <- factor(test_data$FTR, levels = levels(train_data$FTR))
 
 # Check lengths
 cat("Length of y_test:", length(y_test), "\n")
-cat("Length of model_fit.ridge.pred:", length(model_fit.ridge.pred), "\n")
+cat("Length of model_fit.ridge.pred:", dim(model_fit.ridge.pred)[1], "\n")  # Use dim for 3D array
 
 # Check contents
 print(head(y_test))
-print(head(model_fit.ridge.pred))
 
-# Apply the roc function to get the best threshold value
-if (length(y_test) == length(model_fit.ridge.pred)) {
-    model_fit.ridge.roc <- roc(y_test, model_fit.ridge.pred, plot = TRUE, print.auc = TRUE)
+# Initialize a list to store ROC curves and thresholds
+roc_curves <- list()
+best_thresholds <- list()
 
+# Loop through each class to compute ROC
+for (class in levels(y_test)) {
+    # Extract predicted probabilities for the current class
+    class_index <- which(colnames(model_fit.ridge.pred) == class)
+    model_fit.ridge.pred_class <- model_fit.ridge.pred[, class_index, 1]
+    
+    # Compute the ROC curve
+    model_fit.ridge.roc <- roc(y_test, model_fit.ridge.pred_class, plot = TRUE, print.auc = TRUE, 
+                               main = paste("ROC Curve for", class))
+    
     # Get the best threshold
     best_threshold <- coords(model_fit.ridge.roc, "best", ret = "threshold")
-    print(best_threshold)
-} else {
-    cat("Error: Lengths of response and predictions do not match. Cannot compute ROC.\n")
+    best_thresholds[[class]] <- best_threshold
+    roc_curves[[class]] <- model_fit.ridge.roc
 }
+
+```
+
+```{r}
+# Make predictions on the test set
+model_fit.ridge.pred <- predict(model_fit.ridge, s = modelcv_bestlam.ridge, 
+                                 newx = x_test, type = "response")
+
+# Prepare the response variable
+y_test <- factor(test_data$FTR, levels = levels(train_data$FTR))
+
+# Check the structure of the predictions
+str(model_fit.ridge.pred)
+
+# Extract the predicted probabilities for each class
+predicted_classes <- apply(model_fit.ridge.pred, 1, which.max)  # Get the index of the max probability
+predicted_classes <- levels(y_test)[predicted_classes]  # Convert indices to class labels
+
+# Create a confusion matrix
+confusion_matrix <- table(Predicted = predicted_classes, Actual = y_test)
+print("Confusion Matrix:")
+print(confusion_matrix)
+
+# Calculate overall accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+cat("Overall Accuracy:", accuracy, "\n")
+
+# Calculate sensitivity and specificity for each class
+sensitivity <- numeric(length(levels(y_test)))
+specificity <- numeric(length(levels(y_test)))
+
+for (i in seq_along(levels(y_test))) {
+    class <- levels(y_test)[i]
+    
+    # True Positives
+    TP <- confusion_matrix[class, class]
+    
+    # False Negatives
+    FN <- sum(confusion_matrix[class, ]) - TP
+    
+    # False Positives
+    FP <- sum(confusion_matrix[, class]) - TP
+    
+    # True Negatives
+    TN <- sum(confusion_matrix) - (TP + FP + FN)
+    
+    # Calculate sensitivity and specificity
+    sensitivity[i] <- TP / (TP + FN)  # Sensitivity (True Positive Rate)
+    specificity[i] <- TN / (TN + FP)  # Specificity (True Negative Rate)
+    
+    cat("Class:", class, "\n")
+    cat("Sensitivity:", sensitivity[i], "\n")
+    cat("Specificity:", specificity[i], "\n")
+}
+
+# Print overall sensitivity and specificity
+cat("Overall Sensitivity:", mean(sensitivity), "\n")
+cat("Overall Specificity:", mean(specificity), "\n")
 ```
