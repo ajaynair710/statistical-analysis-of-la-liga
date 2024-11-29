@@ -614,3 +614,104 @@ print(conf_matrix)
 ```
 
 ### Ridge logistic regression
+
+Now we try with ridge regression. As before we use as starting point the formula with all predictors and interaction term.
+
+```{r}
+# Convert predictors to a matrix
+x <- model.matrix(FTR ~ ., data = train_data)[, -1]  # Exclude the intercept
+
+# Response variable
+y <- train_data$FTR  # Ensure this is a factor for multinomial classification
+
+# Fit ridge regression model
+model_fit.ridge <- glmnet(
+  x, 
+  y, 
+  family = "multinomial", 
+  alpha = 0
+)
+
+# Plot the ridge model
+plot(model_fit.ridge, xvar = "lambda", label = TRUE)
+```
+
+Choose the best value of lambda via cross-validation.
+
+```{r}
+modelcv.ridge <- cv.glmnet(
+  x, 
+  y, 
+  alpha = 0,  
+  family = "multinomial"  
+)
+
+# Plot cross-validation results
+plot(modelcv.ridge)
+```
+
+The value of λ that minimizes the ridge cross-validated mean square error is:
+
+```{r}
+modelcv.ridge$lambda.min
+```
+
+However, we select the simplest model whose λ value is within one standard error from the minimum of the cross-validated mean square error:
+
+```{r}
+modelcv_bestlam.ridge <- modelcv.ridge$lambda.1se
+modelcv_bestlam.ridge
+```
+
+Now visualize again the ridge estimates as a function of the logarithm of λ and add a vertical line corresponding to best.lambda:
+
+```{r}
+plot(model_fit.ridge, xvar = "lambda", label = TRUE)
+abline(v = log(modelcv_bestlam.ridge), lwd = 1.2, lty = "dashed")
+```
+
+These are the coefficients:
+
+```{r}
+ridge_coefficients <- coef(model_fit.ridge, s = modelcv_bestlam.ridge)
+print(ridge_coefficients)
+```
+
+We make the prediction on the test set.
+
+```{r}
+# Make predictions on the test set
+model_fit.ridge.pred <- predict(model_fit.ridge, s = modelcv_bestlam.ridge, 
+                                 newx = x_test, type = "response")
+
+# Check the structure of the predictions
+str(model_fit.ridge.pred)
+
+# If it's a single vector, you can use it directly
+if (is.vector(model_fit.ridge.pred)) {
+    # If it's a binary classification, you might want to convert it to a factor
+    model_fit.ridge.pred <- as.numeric(model_fit.ridge.pred > 0.5)  # Assuming 0.5 is the threshold
+}
+
+# Prepare the response variable
+y_test <- factor(test_data$FTR, levels = levels(train_data$FTR))
+
+# Check lengths
+cat("Length of y_test:", length(y_test), "\n")
+cat("Length of model_fit.ridge.pred:", length(model_fit.ridge.pred), "\n")
+
+# Check contents
+print(head(y_test))
+print(head(model_fit.ridge.pred))
+
+# Apply the roc function to get the best threshold value
+if (length(y_test) == length(model_fit.ridge.pred)) {
+    model_fit.ridge.roc <- roc(y_test, model_fit.ridge.pred, plot = TRUE, print.auc = TRUE)
+
+    # Get the best threshold
+    best_threshold <- coords(model_fit.ridge.roc, "best", ret = "threshold")
+    print(best_threshold)
+} else {
+    cat("Error: Lengths of response and predictions do not match. Cannot compute ROC.\n")
+}
+```
