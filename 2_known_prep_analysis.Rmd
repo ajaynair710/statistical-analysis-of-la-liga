@@ -784,9 +784,6 @@ nb.pred <- predict(nb.fit, newdata = test_data, type = "raw")
 Let's plot the ROC :
 
 ```{r}
-# Load necessary library
-library(pROC)
-
 # Naive Bayes model fitting
 nb.fit <- naiveBayes(formula(multinom_model), data = train_data)
 
@@ -801,11 +798,33 @@ if (!all(levels(test_data$FTR) %in% colnames(nb.pred))) {
   stop("Mismatch between levels of test_data$FTR and columns in nb.pred")
 }
 
+# Calculate predicted classes by selecting the class with highest probability
+predicted_classes <- apply(nb.pred, 1, which.max)
+predicted_classes <- levels(test_data$FTR)[predicted_classes]  # Convert indices to class labels
+
+# Create confusion matrix
+confusion_matrix <- confusionMatrix(factor(predicted_classes, levels = levels(test_data$FTR)), test_data$FTR)
+print("Confusion Matrix:")
+print(confusion_matrix)
+
+# Accuracy
+accuracy <- confusion_matrix$overall['Accuracy']
+cat("Accuracy:", accuracy, "\n")
+
+# Sensitivity and Specificity for each class
+sensitivity <- confusion_matrix$byClass[, "Sensitivity"]
+specificity <- confusion_matrix$byClass[, "Specificity"]
+
+cat("Sensitivity for each class:\n")
+print(sensitivity)
+
+cat("Specificity for each class:\n")
+print(specificity)
+
 # Loop through each class and generate individual ROC curves
-classes <- colnames(nb.pred)  # Classes from predictions
 roc_curves <- list()
 
-for (class in classes) {
+for (class in levels(test_data$FTR)) {
   # Create a binary response for the current class
   binary_response <- ifelse(test_data$FTR == class, 1, 0)
   
@@ -815,11 +834,12 @@ for (class in classes) {
   
   # Plot the ROC curve for the current class
   plot.roc(
-    roc_curve,
+    roc_curve, 
     lwd = 2, 
     main = paste("ROC Curve for Class:", class),
     print.auc = TRUE
   )
+  
 }
 
 ```
