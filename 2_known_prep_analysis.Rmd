@@ -784,10 +784,42 @@ nb.pred <- predict(nb.fit, newdata = test_data, type = "raw")
 Let's plot the ROC :
 
 ```{r}
-nb.roc <- roc(test_data$FTR ~ nb.pred[,2], plot=TRUE, print.auc=TRUE, main="Naive Bayes ROC curve")
-```
+# Load necessary library
+library(pROC)
 
-```{r}
+# Naive Bayes model fitting
+nb.fit <- naiveBayes(formula(multinom_model), data = train_data)
 
+# Predictions (raw probabilities for all classes)
+nb.pred <- predict(nb.fit, newdata = test_data, type = "raw")
+
+# Ensure FTR is a factor in the test data
+test_data$FTR <- as.factor(test_data$FTR)
+
+# Validate response and predictor alignment
+if (!all(levels(test_data$FTR) %in% colnames(nb.pred))) {
+  stop("Mismatch between levels of test_data$FTR and columns in nb.pred")
+}
+
+# Loop through each class and generate individual ROC curves
+classes <- colnames(nb.pred)  # Classes from predictions
+roc_curves <- list()
+
+for (class in classes) {
+  # Create a binary response for the current class
+  binary_response <- ifelse(test_data$FTR == class, 1, 0)
+  
+  # Compute the ROC curve
+  roc_curve <- roc(binary_response, nb.pred[, class])
+  roc_curves[[class]] <- roc_curve
+  
+  # Plot the ROC curve for the current class
+  plot.roc(
+    roc_curve,
+    lwd = 2, 
+    main = paste("ROC Curve for Class:", class),
+    print.auc = TRUE
+  )
+}
 
 ```
