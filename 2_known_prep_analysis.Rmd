@@ -765,3 +765,29 @@ for (i in seq_along(levels(y_test))) {
 cat("Overall Sensitivity:", mean(sensitivity), "\n")
 cat("Overall Specificity:", mean(specificity), "\n")
 ```
+
+## Naive Bayes
+
+Continuing with the analysis we try Naive Bayes algorithm. In this case we can’t use a model with interaction term since Naive Bayes do not support these relations. Thus we decide to use the Full Model. 
+
+```{r}
+nb.fit <- naiveBayes(formula(multinom_model), data = train_data)
+nb.fit
+```
+
+Prediction for the test set:
+
+```{r}
+nb.pred <- predict(nb.fit, newdata = test_data, type = "raw")
+```
+
+Let's plot the ROC :
+
+```{r}
+nb.roc <- roc(test_data$FTR ~ nb.pred[,2], plot=TRUE, print.auc=TRUE, main="Naive Bayes ROC curve")
+```
+
+```{r}
+
+
+```
