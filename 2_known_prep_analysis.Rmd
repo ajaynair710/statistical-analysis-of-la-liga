@@ -432,6 +432,24 @@ print(conf_matrix_stepwise)
 
 ```
 
+```{r}
+
+# Extract the best threshold and metrics for Stepwise Model
+roc_metrics_stepwise <- coords(roc_stepwise, x = "best", ret = "all")
+
+# Rename the row for clarity
+row.names(roc_metrics_stepwise) <- "Stepwise Model"
+
+roc_results <- rbind(
+  roc_results, 
+  roc_metrics_stepwise 
+)
+
+# Print the updated roc_results
+print(roc_results)
+
+```
+
 ### Lasso Regression
 
 ```{r}
@@ -843,3 +861,10 @@ for (class in levels(test_data$FTR)) {
 }
 
 ```
+
+## Conclusion
+
+```{r}
+print(roc_results)
+```
+
