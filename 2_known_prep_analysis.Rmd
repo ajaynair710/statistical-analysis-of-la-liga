@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Requirements
 
 ```{r requirements, results='hide'}
-requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret", "gridExtra", "effects", "nnet")
+requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret", "gridExtra", "effects", "nnet", "ggplot2", "reshape2")
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
@@ -208,9 +208,42 @@ test_data <- read.csv("testing/test.csv")
 ```
 
 ```{r}
-# Load required libraries
-library(pROC)
-library(caret)
+# Function to plot ROC curves for a model
+plot_roc <- function(test_data, prob_matrix, model_name) {
+  roc_list <- lapply(1:ncol(prob_matrix), function(i) {
+    roc(test_data$FTR == colnames(prob_matrix)[i], prob_matrix[, i])
+  })
+  
+  # Extract AUC values
+  auc_values <- sapply(roc_list, function(r) auc(r))
+  class_names <- colnames(prob_matrix)
+  
+  # Prepare data for ggplot
+  roc_data <- do.call(rbind, lapply(1:length(roc_list), function(i) {
+    data.frame(
+      Specificity = 1 - roc_list[[i]]$specificities,
+      Sensitivity = roc_list[[i]]$sensitivities,
+      Class = class_names[i]
+    )
+  }))
+  
+  # Plot using ggplot
+  ggplot(data = roc_data, aes(x = Specificity, y = Sensitivity, color = Class)) +
+    geom_line(size = 1) +
+    labs(
+      title = paste("ROC Curve for", model_name),
+      subtitle = paste("AUC:", 
+                       paste(class_names, round(auc_values, 3), collapse = ", ")),
+      x = "1 - Specificity",
+      y = "Sensitivity"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 14, face = "bold"),
+          plot.subtitle = element_text(size = 12),
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10)) +
+    scale_color_brewer(palette = "Set1")
+}
 
 # Compute probabilities for each model
 prob_multinom_model <- predict(multinom_model, test_data, type = "prob")
@@ -218,21 +251,11 @@ prob_multinom_model.inter <- predict(multinom_model.inter, test_data, type = "pr
 prob_multinom_model.clean <- predict(multinom_model.clean, test_data, type = "prob")
 prob_multinom_model.clean.inter <- predict(multinom_model.clean.inter, test_data, type = "prob")
 
-# Set up the 2x2 plotting area
-par(mfrow = c(2, 2))
-
-# Plot ROC curve for each model with AUC
-roc_multinom_model <- roc(test_data$FTR ~ prob_multinom_model[,1], plot = TRUE, 
-                          print.auc = TRUE, main = "multinom_model ROC Curve")
-
-roc_multinom_model.inter <- roc(test_data$FTR ~ prob_multinom_model.inter[,1], plot = TRUE, 
-                                 print.auc = TRUE, main = "multinom_model.inter ROC Curve")
-
-roc_multinom_model.clean <- roc(test_data$FTR ~ prob_multinom_model.clean[,1], plot = TRUE, 
-                                 print.auc = TRUE, main = "multinom_model.clean ROC Curve")
-
-roc_multinom_model.clean.inter <- roc(test_data$FTR ~ prob_multinom_model.clean.inter[,1], plot = TRUE, 
-                                       print.auc = TRUE, main = "multinom_model.clean.inter ROC Curve")
+# Plot ROC curves for each model
+plot_roc(test_data, prob_multinom_model, "Multinom Model")
+plot_roc(test_data, prob_multinom_model.inter, "Multinom Model with Interaction")
+plot_roc(test_data, prob_multinom_model.clean, "Cleaned Multinom Model")
+plot_roc(test_data, prob_multinom_model.clean.inter, "Cleaned Multinom Model with Interaction")
 
 ```
 
@@ -241,21 +264,45 @@ By the plots we can see that the Area Under the Curve (AUC) computed by the ROC 
 Now we extract from each roc object the best threshold in order to use it during predictions.
 
 ```{r}
-# Extract best thresholds and metrics for each ROC object
-roc_metrics_full <- coords(roc_multinom_model, x = "best", ret = "all")
-roc_metrics_full_inter <- coords(roc_multinom_model.inter, x = "best", ret = "all")
-roc_metrics_clean <- coords(roc_multinom_model.clean, x = "best", ret = "all")
-roc_metrics_clean_inter <- coords(roc_multinom_model.clean.inter, x = "best", ret = "all")
+# Compute individual ROC curves for each class
+roc_list_full <- lapply(1:ncol(prob_multinom_model), function(i) {
+  roc(test_data$FTR == colnames(prob_multinom_model)[i], prob_multinom_model[, i])
+})
+roc_list_full_inter <- lapply(1:ncol(prob_multinom_model.inter), function(i) {
+  roc(test_data$FTR == colnames(prob_multinom_model.inter)[i], prob_multinom_model.inter[, i])
+})
+roc_list_clean <- lapply(1:ncol(prob_multinom_model.clean), function(i) {
+  roc(test_data$FTR == colnames(prob_multinom_model.clean)[i], prob_multinom_model.clean[, i])
+})
+roc_list_clean_inter <- lapply(1:ncol(prob_multinom_model.clean.inter), function(i) {
+  roc(test_data$FTR == colnames(prob_multinom_model.clean.inter)[i], prob_multinom_model.clean.inter[, i])
+})
+
+# Extract best thresholds and metrics for each class
+extract_metrics <- function(roc_list) {
+  lapply(roc_list, function(r) coords(r, x = "best", ret = c("threshold", "specificity", "sensitivity", "accuracy")))
+}
+
+roc_metrics_full <- extract_metrics(roc_list_full)
+roc_metrics_full_inter <- extract_metrics(roc_list_full_inter)
+roc_metrics_clean <- extract_metrics(roc_list_clean)
+roc_metrics_clean_inter <- extract_metrics(roc_list_clean_inter)
 ```
 
 Rename the single row for each dataframe and concatenate all in a single one.
 
 ```{r}
-# Rename rows to identify models
-row.names(roc_metrics_full) <- "Full Model"
-row.names(roc_metrics_full_inter) <- "Interaction Full Model"
-row.names(roc_metrics_clean) <- "Cleaned Model"
-row.names(roc_metrics_clean_inter) <- "Interaction Cleaned Model"
+# Combine metrics for each model
+combine_metrics <- function(roc_metrics_list) {
+  metrics <- do.call(rbind, roc_metrics_list)
+  rownames(metrics) <- colnames(prob_multinom_model)
+  metrics
+}
+
+roc_metrics_full <- combine_metrics(roc_metrics_full)
+roc_metrics_full_inter <- combine_metrics(roc_metrics_full_inter)
+roc_metrics_clean <- combine_metrics(roc_metrics_clean)
+roc_metrics_clean_inter <- combine_metrics(roc_metrics_clean_inter)
 
 # Combine all metrics into a single dataframe
 roc_results <- rbind(
@@ -268,110 +315,94 @@ roc_results <- rbind(
 
 Now we make a comparisons result: 
 
-1. Specificity
-
 ```{r}
-library(dplyr)
-roc_results_df <- as.data.frame(roc_results)
+# Compute average metrics across classes for each model
+average_metrics <- function(metrics) {
+  colMeans(metrics, na.rm = TRUE)
+}
 
-# Select and arrange specificity
-specificity_comparison <- roc_results_df %>%
-  dplyr::select(specificity) %>%
-  dplyr::arrange(desc(specificity))
+average_metrics_full <- average_metrics(roc_metrics_full)
+average_metrics_full_inter <- average_metrics(roc_metrics_full_inter)
+average_metrics_clean <- average_metrics(roc_metrics_clean)
+average_metrics_clean_inter <- average_metrics(roc_metrics_clean_inter)
 
-# View the results
-print(specificity_comparison)
+# Combine all model metrics into a single dataframe
+comparison_df <- data.frame(
+  Model = c("Full Model", "Full Interaction Model", "Cleaned Model", "Cleaned Interaction Model"),
+  Accuracy = c(average_metrics_full["accuracy"], 
+               average_metrics_full_inter["accuracy"],
+               average_metrics_clean["accuracy"], 
+               average_metrics_clean_inter["accuracy"]),
+  Sensitivity = c(average_metrics_full["sensitivity"], 
+                  average_metrics_full_inter["sensitivity"],
+                  average_metrics_clean["sensitivity"], 
+                  average_metrics_clean_inter["sensitivity"]),
+  Specificity = c(average_metrics_full["specificity"], 
+                  average_metrics_full_inter["specificity"],
+                  average_metrics_clean["specificity"], 
+                  average_metrics_clean_inter["specificity"])
+)
+
+# Print the comparison table
+print(comparison_df)
 ```
 
-In terms of specificity the best model is the Interaction Full Model.
-
-2. Sensitivity
-```{r}
-sensitivity_comparison <- roc_results_df %>%
-  dplyr::select(sensitivity) %>%
-  dplyr::arrange(desc(sensitivity))
-
-print(sensitivity_comparison)
-```
-
-Regarding the sensitivity the best model is the Cleaned Model.
-
-3. Accuracy 
-
-```{r}
-accuracy_comparison <- roc_results_df %>%
-  dplyr::select(accuracy) %>%
-  dplyr::arrange(desc(accuracy))
-
-print(accuracy_comparison)
-```
-
-And finally for the accuracy measure the best model is the Interaction Full Model.
-
-Also, we can see that the response is unbalanced.
+The Full Model is best for accuracy, the Full Interaction Model excels in sensitivity, and the Cleaned Model performs best in specificity. We can see that the response is unbalanced.
 
 ### Confusion Matrixes
 
 Let’s have a quick look on the confusion matrix for the four model that we have specified.
 
 ```{r}
-# Extract the thresholds from the ROC metrics
-threshold_full <- roc_metrics_full$threshold
-threshold_full_inter <- roc_metrics_full_inter$threshold
-threshold_clean <- roc_metrics_clean$threshold
-threshold_clean_inter <- roc_metrics_clean_inter$threshold
+test_data$FTR <- factor(test_data$FTR, levels = c("Away Win", "Draw", "Home Win"))
 
-# For multinomial classification, select the class with the highest probability
-pred_full <- apply(prob_multinom_model, 1, function(x) which.max(x))
-pred_full_inter <- apply(prob_multinom_model.inter, 1, function(x) which.max(x))
-pred_clean <- apply(prob_multinom_model.clean, 1, function(x) which.max(x))
-pred_clean_inter <- apply(prob_multinom_model.clean.inter, 1, function(x) which.max(x))
+# Predict class labels for each model using the best thresholds
+pred_multinom_model <- factor(predict(multinom_model, test_data, type = "class"), levels = c("Away Win", "Draw", "Home Win"))
+pred_multinom_model.inter <- factor(predict(multinom_model.inter, test_data, type = "class"), levels = c("Away Win", "Draw", "Home Win"))
+pred_multinom_model.clean <- factor(predict(multinom_model.clean, test_data, type = "class"), levels = c("Away Win", "Draw", "Home Win"))
+pred_multinom_model.clean.inter <- factor(predict(multinom_model.clean.inter, test_data, type = "class"), levels = c("Away Win", "Draw", "Home Win"))
+
+# Generate confusion matrices for each model
+conf_matrix_multinom_model <- confusionMatrix(pred_multinom_model, test_data$FTR)
+conf_matrix_multinom_model.inter <- confusionMatrix(pred_multinom_model.inter, test_data$FTR)
+conf_matrix_multinom_model.clean <- confusionMatrix(pred_multinom_model.clean, test_data$FTR)
+conf_matrix_multinom_model.clean.inter <- confusionMatrix(pred_multinom_model.clean.inter, test_data$FTR)
 ```
 
-1. Full Model 
+1. Full Model
+
 
 ```{r}
-# Create confusion matrices
-conf_matrix_full <- table(pred = pred_full, true = as.factor(test_data$FTR))
-cat("Full Model Confusion Matrix:\n")
-print(conf_matrix_full)
+print(conf_matrix_multinom_model)
 ```
 
-2. Interaction Full Model
+2. Full Interaction Model
 
 ```{r}
-conf_matrix_full_inter <- table(pred = pred_full_inter, true = as.factor(test_data$FTR))
-cat("Interaction Full Model Confusion Matrix:\n")
-print(conf_matrix_full_inter)
+print(conf_matrix_multinom_model.inter)
 ```
 
 3. Cleaned Model
 
+
 ```{r}
-conf_matrix_clean <- table(pred = pred_clean, true = as.factor(test_data$FTR))
-cat("Cleaned Model Confusion Matrix:\n")
-print(conf_matrix_clean)
+print(conf_matrix_multinom_model.clean)
 ```
 
-4. Interaction Cleaned Model
+4. Cleaned Interaction Model
+
 
 ```{r}
-conf_matrix_clean_inter <- table(pred = pred_clean_inter, true = as.factor(test_data$FTR))
-cat("Interaction Cleaned Model Confusion Matrix:\n")
-print(conf_matrix_clean_inter)
+print(conf_matrix_multinom_model.clean.inter)
 ```
 
 ## Model Selection
 
+### Stepwise Model
+
 Now let’s apply automatic model selection to identity the best model.
 
 ```{r}
-# Load libraries
-install.packages("MASS")
-install.packages("nnet")
-library(MASS)
-library(nnet)
-
 # Fit a full multinomial model
 full_model <- multinom(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = test_data)
 
@@ -406,229 +437,259 @@ print(aic_results_sorted)
 In terms of AIC the “Step model” is better.
 
 ```{r}
-# Get the predicted probabilities for the stepwise model
-prob_stepwise <- predict(stepwise_model, test_data, type = "prob")
+# Compute probabilities for the stepwise model
+prob_stepwise_model <- predict(stepwise_model, test_data, type = "prob")
 
-# Define true labels for the ROC curve
-true_labels <- test_data$FTR  # Adjust if needed
-
-# Plot the ROC curve for the stepwise model
-roc_stepwise <- roc(true_labels, prob_stepwise[,1], plot = TRUE, print.auc = TRUE, main = "Stepwise Model ROC Curve")
+# Plot ROC curve for stepwise model
+plot_roc(test_data, prob_stepwise_model, "Stepwise Model")
 ```
 
-```{r}
-# Convert probabilities into class predictions by selecting the class with the highest probability
-pred_stepwise_multiclass <- apply(prob_stepwise, 1, function(x) which.max(x)) 
-
-```
+Confusion Matrix for stepwise model
 
 ```{r}
-# Create confusion matrix for the Stepwise Model
-conf_matrix_stepwise <- table(pred = pred_stepwise_multiclass, true = as.factor(test_data$FTR))
+# Make sure that the response and prediction are factors with the same levels
+pred_stepwise <- predict(stepwise_model, test_data, type = "class")
+pred_stepwise <- factor(pred_stepwise, levels = levels(test_data$FTR))
 
-# Print the confusion matrix
-cat("Stepwise Model Confusion Matrix:\n")
+# Confusion matrix for the stepwise model
+conf_matrix_stepwise <- confusionMatrix(pred_stepwise, test_data$FTR)
+
+# Print the confusion matrix for the stepwise model
 print(conf_matrix_stepwise)
-
 ```
 
+Let's compare it with other models
+
 ```{r}
+# Extract metrics for each class
+specificity_awaywin <- conf_matrix_stepwise$byClass["Class: Away Win", "Specificity"]
+sensitivity_awaywin <- conf_matrix_stepwise$byClass["Class: Away Win", "Sensitivity"]
 
-# Extract the best threshold and metrics for Stepwise Model
-roc_metrics_stepwise <- coords(roc_stepwise, x = "best", ret = "all")
+specificity_draw <- conf_matrix_stepwise$byClass["Class: Draw", "Specificity"]
+sensitivity_draw <- conf_matrix_stepwise$byClass["Class: Draw", "Sensitivity"]
 
-# Rename the row for clarity
-row.names(roc_metrics_stepwise) <- "Stepwise Model"
+specificity_homewin <- conf_matrix_stepwise$byClass["Class: Home Win", "Specificity"]
+sensitivity_homewin <- conf_matrix_stepwise$byClass["Class: Home Win", "Sensitivity"]
 
-roc_results <- rbind(
-  roc_results, 
-  roc_metrics_stepwise 
+accuracy_stepwise <- conf_matrix_stepwise$overall["Accuracy"]
+
+# Overall Sensitivity
+overall_sensitivity <- mean(c(sensitivity_awaywin, sensitivity_draw, sensitivity_homewin))
+
+# Overall Specificity
+overall_specificity <- mean(c(specificity_awaywin, specificity_draw, specificity_homewin))
+
+# Overall Accuracy
+overall_accuracy <- accuracy_stepwise
+
+# Combine these metrics into a single data frame
+metrics_stepwise_overall <- data.frame(
+  Model = "Stepwise Model",
+  Accuracy = overall_accuracy,
+  Sensitivity = overall_sensitivity,  
+  Specificity = overall_specificity 
 )
 
-# Print the updated roc_results
-print(roc_results)
+comparison_df <- rbind(
+  comparison_df,  
+  metrics_stepwise_overall
+)
+
+# Print the comparison
+print(comparison_df)
 
 ```
 
 ### Lasso Regression
 
 ```{r}
-# Convert predictors to a matrix
-x <- model.matrix(FTR ~ ., data = train_data)[, -1]  # Exclude the intercept
+# Prepare the data
+x <- model.matrix(FTR ~ ., data = train_data)[, -1]
+y <- train_data$FTR  
 
-# Response variable
-y <- train_data$FTR  # Ensure this is a factor for multinomial classification
+# Scale predictors
+x_scaled <- scale(x)
 
 # Fit LASSO regression model
-model_fit.lasso <- glmnet(
-  x, 
-  y, 
-  family = "multinomial",  # Corrected the argument
-  alpha = 1  # LASSO regularization
-)
+model_fit.lasso <- glmnet(x_scaled, y, family = "multinomial", alpha = 1)
 
 # Plot the LASSO model
 plot(model_fit.lasso, xvar = "lambda", label = TRUE)
-
 ```
 
 We choose lambda using cross validation:
 
 ```{r}
-modelcv.lasso <- cv.glmnet(
-  x, 
-  y, 
-  alpha = 1,  # LASSO penalty
-  family = "multinomial"  # Multinomial classification
-)
+# Fit Lasso model using cross-validation to choose lambda
+modelcv.lasso <- cv.glmnet(x_scaled, y, alpha = 1, family = "multinomial")
 
-# Plot cross-validation results
+# Plot the lasso path
 plot(modelcv.lasso)
 ```
 
 The value of λ that minimizes the ridge cross-validated mean square error is:
 
 ```{r}
-modelcv.lasso$lambda.min
+lambda_min <- modelcv.lasso$lambda.min
+lambda_min
 ```
 
-Again like before we take as λ value corresponding to one standard error from the minimum of the cross-validated mean square error:
+We take as λ value corresponding to one standard error from the minimum of the cross-validated mean square error:
+
 
 ```{r}
-model_bestlam.lasso <- modelcv.lasso$lambda.1se
-model_bestlam.lasso
+lambda_1se <- modelcv.lasso$lambda.1se
+lambda_1se
 ```
 
-Like before, now visualize again the lasso estimates as a function of the logarithm of λ and add a vertical line corresponding to best.lambda:
+Now visualize again the lasso estimates as a function of the logarithm of λ and add a vertical line corresponding to best.lambda:
 
 ```{r}
-plot(model_fit.lasso)
-abline(v = log(model_bestlam.lasso), lwd = 1.2, lty = "dashed")
+plot(model_fit.lasso, xvar = "lambda", label = TRUE)
+abline(v = log(lambda_1se), lwd = 1.2, lty = "dashed")
 ```
 
 These are the coefficients:
 
 ```{r}
 # Extract coefficients at the best lambda
-model_bestlam.lasso.coef <- coef(model_fit.lasso, s = model_bestlam.lasso)
+model_bestlam.lasso.coef <- coef(model_fit.lasso, s = lambda_1se)
 
-# Handle potential list or sparse matrix cases
-if (is.list(model_bestlam.lasso.coef)) {
-  coef_matrix <- as.matrix(model_bestlam.lasso.coef[[1]])
-} else {
-  coef_matrix <- as.matrix(model_bestlam.lasso.coef)
-}
+# Process coefficients for each class
+nonzero_coefs <- lapply(model_bestlam.lasso.coef, function(coef_matrix) {
+  coef_matrix <- as.matrix(coef_matrix)
+  coef_matrix[coef_matrix != 0, , drop = FALSE]
+})
 
-# Filter non-zero coefficients
-nonzero_coefs <- coef_matrix[coef_matrix != 0, , drop = FALSE]
 print(nonzero_coefs)
-
 ```
 
 Now we apply prediction on the test set.
 
 ```{r}
-# Use the same formula as training data
+
+# Prepare the data for the training set
+x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
+x_train_scaled <- scale(x_train)
+
+# Prepare the data for the test set
 x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
 
-# Check dimensions of x and x_test
-print(dim(x))
-print(dim(x_test))
+# Align columns between training and test sets
+common_columns <- intersect(colnames(x_train), colnames(x_test))
+x_test <- x_test[, common_columns, drop = FALSE]                  
+x_train <- x_train[, common_columns, drop = FALSE]                
 
-test_data$FTR <- factor(test_data$FTR, levels = levels(train_data$FTR))
+# Rescale training data
+x_train_scaled <- scale(x_train)
 
-# Match test_data columns to training data
-x_test <- model.matrix(FTR ~ ., data = test_data, xlev = attr(x, "assign"))[, -1]
+# Scale the test set using training set scaling parameters
+x_test_scaled <- scale(x_test, 
+                       center = attr(x_train_scaled, "scaled:center"), 
+                       scale = attr(x_train_scaled, "scaled:scale"))
 
-# Identify missing columns
-missing_cols <- setdiff(colnames(x), colnames(x_test))
-for (col in missing_cols) {
-  x_test <- cbind(x_test, 0)  # Add a column with all zeros
-  colnames(x_test)[ncol(x_test)] <- col
+# Fit LASSO regression on the training set
+model_fit.lasso <- glmnet(x_train_scaled, train_data$FTR, 
+                          family = "multinomial", alpha = 1)
+
+# Perform cross-validation to select lambda
+modelcv.lasso <- cv.glmnet(x_train_scaled, train_data$FTR, 
+                           family = "multinomial", alpha = 1)
+
+# Get the best lambda (lambda.1se)
+model_bestlam.lasso <- modelcv.lasso$lambda.1se
+
+# Predict probabilities for the test set
+pred_prob_lasso <- predict(model_fit.lasso, 
+                           newx = x_test_scaled, 
+                           s = model_bestlam.lasso, 
+                           type = "response")
+
+# Predict class labels for the test set
+pred_class_lasso <- predict(model_fit.lasso, 
+                            newx = x_test_scaled, 
+                            s = model_bestlam.lasso, 
+                            type = "class")
+
+# Convert predictions to factors with the same levels as the test response variable
+pred_class_lasso <- factor(pred_class_lasso, levels = levels(test_data$FTR))
+
+```
+
+Now, let's see the confusion matrix.
+
+```{r}
+# Generate confusion matrix for the LASSO model
+conf_matrix_lasso <- confusionMatrix(pred_class_lasso, test_data$FTR)
+
+# Print the confusion matrix
+print(conf_matrix_lasso)
+```
+
+Then we apply the roc function to obtain the best threshold value.
+
+```{r}
+# Generate confusion matrix for the LASSO model
+conf_matrix_lasso <- confusionMatrix(pred_class_lasso, test_data$FTR)
+
+# Print the confusion matrix
+print("Confusion Matrix for LASSO Model:")
+print(conf_matrix_lasso)
+
+# Check the structure of predicted probabilities
+if (!is.data.frame(pred_prob_lasso)) {
+  pred_prob_lasso <- as.data.frame(pred_prob_lasso)
 }
+```
 
-# Ensure column order matches
-x_test <- x_test[, colnames(x)]
 
-test_data$FTR <- factor(test_data$FTR, levels = levels(train_data$FTR))
+```{r}
+colnames(pred_prob_lasso) <- levels(test_data$FTR)
 
-# Repeat for other factor predictors:
-for (col in names(test_data)) {
-  if (is.factor(test_data[[col]])) {
-    test_data[[col]] <- factor(test_data[[col]], levels = levels(train_data[[col]]))
-  }
-}
+test_labels <- model.matrix(~ test_data$FTR - 1)
+colnames(test_labels) <- levels(test_data$FTR)
 
-# Predict probabilities for each class using the best lambda
-model_fit.lasso.prob <- predict(
-  model_fit.lasso, 
-  s = model_bestlam.lasso, 
-  newx = x_test, 
-  type = "response"
+plot_roc(test_data, pred_prob_lasso, "LASSO Model")
+
+```
+
+```{r}
+# Extract metrics for each class from the LASSO confusion matrix
+specificity_awaywin_lasso <- conf_matrix_lasso$byClass["Class: Away Win", "Specificity"]
+sensitivity_awaywin_lasso <- conf_matrix_lasso$byClass["Class: Away Win", "Sensitivity"]
+
+specificity_draw_lasso <- conf_matrix_lasso$byClass["Class: Draw", "Specificity"]
+sensitivity_draw_lasso <- conf_matrix_lasso$byClass["Class: Draw", "Sensitivity"]
+
+specificity_homewin_lasso <- conf_matrix_lasso$byClass["Class: Home Win", "Specificity"]
+sensitivity_homewin_lasso <- conf_matrix_lasso$byClass["Class: Home Win", "Sensitivity"]
+
+accuracy_lasso <- conf_matrix_lasso$overall["Accuracy"]
+
+# Calculate overall metrics for the LASSO model
+overall_sensitivity_lasso <- mean(c(sensitivity_awaywin_lasso, sensitivity_draw_lasso, sensitivity_homewin_lasso))
+overall_specificity_lasso <- mean(c(specificity_awaywin_lasso, specificity_draw_lasso, specificity_homewin_lasso))
+overall_accuracy_lasso <- accuracy_lasso
+
+```
+
+```{r}
+# Combine LASSO metrics into a data frame
+metrics_lasso_overall <- data.frame(
+  Model = "LASSO Model",
+  Accuracy = overall_accuracy_lasso,
+  Sensitivity = overall_sensitivity_lasso,
+  Specificity = overall_specificity_lasso
 )
 
-```
+# Add LASSO metrics to the comparison data frame
+comparison_df <- rbind(
+  comparison_df,
+  metrics_lasso_overall
+)
 
-```{r}
-# Remove the third dimension
-prob_matrix <- model_fit.lasso.prob[, , 1]
-
-# Create an empty list to store ROC curves
-roc_curves <- list()
-
-# Loop over each class to calculate and plot the ROC curve
-for (class in colnames(prob_matrix)) {
-  # Create binary response for the current class
-  binary_response <- ifelse(test_data$FTR == class, 1, 0)
-  
-  # Access probabilities for the current class
-  class_probs <- prob_matrix[, class]
-  
-  # Compute the ROC curve
-  roc_curve <- roc(binary_response, class_probs)
-  roc_curves[[class]] <- roc_curve
-  
-  # Plot ROC curve for this class
-  plot.roc(
-    roc_curve, 
-    main = paste("ROC Curve - Class", class), 
-    col = which(colnames(prob_matrix) == class), 
-    lwd = 2,
-    print.auc = TRUE
-  )
-  
-  # Calculate sensitivity, specificity, and accuracy
-  thresholds <- coords(roc_curve, "best", ret = c("threshold", "sensitivity", "specificity"), best.method = "closest.topleft")
-  
-  # Print metrics
-  cat("Class:", class, "\n")
-  cat("Threshold:", thresholds$threshold, "\n")
-  cat("Sensitivity:", thresholds$sensitivity, "\n")
-  cat("Specificity:", thresholds$specificity, "\n")
-  
-  # Calculate predicted classes based on the highest probability
-  predicted_classes <- apply(prob_matrix, 1, which.max)  # Get the index of the max probability
-  actual_classes <- as.numeric(factor(test_data$FTR, levels = colnames(prob_matrix)))  # Convert actual classes to numeric
-  
-  # Calculate accuracy
-  accuracy <- mean(predicted_classes == actual_classes)
-  cat("Accuracy:", accuracy, "\n\n")
-}
-
-```
-
-```{r}
-# Get predicted classes based on the highest probability
-predicted_classes <- apply(prob_matrix, 1, function(x) colnames(prob_matrix)[which.max(x)])
-
-# Convert actual classes to numeric form (same order as the columns in prob_matrix)
-actual_classes <- test_data$FTR
-
-# Create confusion matrix
-conf_matrix <- confusionMatrix(factor(predicted_classes, levels = colnames(prob_matrix)), factor(actual_classes, levels = colnames(prob_matrix)))
-
-# Print confusion matrix
-print(conf_matrix)
+# Print the updated comparison
+print(comparison_df)
 ```
 
 ### Ridge logistic regression
@@ -637,10 +698,10 @@ Now we try with ridge regression. As before we use as starting point the formula
 
 ```{r}
 # Convert predictors to a matrix
-x <- model.matrix(FTR ~ ., data = train_data)[, -1]  # Exclude the intercept
+x <- model.matrix(FTR ~ ., data = train_data)[, -1] 
 
 # Response variable
-y <- train_data$FTR  # Ensure this is a factor for multinomial classification
+y <- train_data$FTR
 
 # Fit ridge regression model
 model_fit.ridge <- glmnet(
@@ -691,97 +752,144 @@ abline(v = log(modelcv_bestlam.ridge), lwd = 1.2, lty = "dashed")
 These are the coefficients:
 
 ```{r}
-ridge_coefficients <- coef(model_fit.ridge, s = modelcv_bestlam.ridge)
-print(ridge_coefficients)
+# Extract coefficients at the best lambda
+model_bestlam.ridge.coef <- coef(model_fit.ridge, s = lambda_1se)
+
+# Process coefficients for each class
+nonzero_coefs <- lapply(model_bestlam.ridge.coef, function(coef_matrix) {
+  coef_matrix <- as.matrix(coef_matrix)
+  coef_matrix[coef_matrix != 0, , drop = FALSE]
+})
+
+print(nonzero_coefs)
 ```
 
 We make the prediction on the test set.
 
 ```{r}
-# Make predictions on the test set
-model_fit.ridge.pred <- predict(model_fit.ridge, s = modelcv_bestlam.ridge, 
-                                 newx = x_test, type = "response")
+# Extract coefficients at the best lambda
+model_bestlam.ridge.coef <- coef(model_fit.ridge, s = lambda_1se)
 
-# Check the structure of the predictions
-str(model_fit.ridge.pred)
+# Process coefficients for each class
+nonzero_coefs <- lapply(model_bestlam.ridge.coef, function(coef_matrix) {
+  coef_matrix <- as.matrix(coef_matrix)
+  coef_matrix[coef_matrix != 0, , drop = FALSE]
+})
 
-# Prepare the response variable
-y_test <- factor(test_data$FTR, levels = levels(train_data$FTR))
+print(nonzero_coefs)
+```
 
-# Check lengths
-cat("Length of y_test:", length(y_test), "\n")
-cat("Length of model_fit.ridge.pred:", dim(model_fit.ridge.pred)[1], "\n")  # Use dim for 3D array
+```{r}
+# Prepare the data for the training set
+x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
+x_train_scaled <- scale(x_train)
 
-# Check contents
-print(head(y_test))
+# Prepare the data for the test set
+x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
 
-# Initialize a list to store ROC curves and thresholds
-roc_curves <- list()
-best_thresholds <- list()
+# Align columns between training and test sets
+common_columns <- intersect(colnames(x_train), colnames(x_test))
+x_test <- x_test[, common_columns, drop = FALSE]                  
+x_train <- x_train[, common_columns, drop = FALSE]                
 
-# Loop through each class to compute ROC
-for (class in levels(y_test)) {
-    # Extract predicted probabilities for the current class
-    class_index <- which(colnames(model_fit.ridge.pred) == class)
-    model_fit.ridge.pred_class <- model_fit.ridge.pred[, class_index, 1]
-    
-    # Compute the ROC curve
-    model_fit.ridge.roc <- roc(y_test, model_fit.ridge.pred_class, plot = TRUE, print.auc = TRUE, 
-                               main = paste("ROC Curve for", class))
-    
-    # Get the best threshold
-    best_threshold <- coords(model_fit.ridge.roc, "best", ret = "threshold")
-    best_thresholds[[class]] <- best_threshold
-    roc_curves[[class]] <- model_fit.ridge.roc
-}
+# Rescale training data
+x_train_scaled <- scale(x_train)
+
+# Scale the test set using training set scaling parameters
+x_test_scaled <- scale(x_test, 
+                       center = attr(x_train_scaled, "scaled:center"), 
+                       scale = attr(x_train_scaled, "scaled:scale"))
+
+# Fit Ridge regression on the training set
+model_fit.ridge <- glmnet(x_train_scaled, train_data$FTR, 
+                          family = "multinomial", alpha = 0)
+
+# Perform cross-validation to select lambda
+modelcv.ridge <- cv.glmnet(x_train_scaled, train_data$FTR, 
+                           family = "multinomial", alpha = 0)
+
+# Get the best lambda (lambda.1se)
+model_bestlam.ridge <- modelcv.ridge$lambda.1se
+
+# Make predictions
+pred_class_ridge <- predict(model_fit.ridge, newx = x_test_scaled, s = model_bestlam.ridge, type = "class")
+
+# Check predictions
+cat("Predicted classes:\n")
+print(table(pred_class_ridge))
+
+# Ensure both variables are factors with matching levels
+test_data$FTR <- factor(test_data$FTR)
+pred_class_ridge <- factor(pred_class_ridge, levels = levels(test_data$FTR))
+
+# Verify overlap
+cat("\nOverlap in levels:\n")
+print(intersect(levels(pred_class_ridge), levels(test_data$FTR)))
+
+# Generate the confusion matrix
+conf_matrix_ridge <- confusionMatrix(pred_class_ridge, test_data$FTR)
+
+# Print the confusion matrix
+print(conf_matrix_ridge)
 
 ```
 
 ```{r}
-# Extract the predicted probabilities for each class
-predicted_classes <- apply(model_fit.ridge.pred, 1, which.max)  # Get the index of the max probability
-predicted_classes <- levels(y_test)[predicted_classes]  # Convert indices to class labels
+# Get predicted probabilities for Ridge model
+pred_prob_ridge <- predict(model_fit.ridge, 
+                           newx = x_test_scaled, 
+                           s = model_bestlam.ridge, 
+                           type = "response")
 
-# Create a confusion matrix
-confusion_matrix <- table(Predicted = predicted_classes, Actual = y_test)
-print("Confusion Matrix:")
-print(confusion_matrix)
+pred_prob_ridge <- matrix(pred_prob_ridge, ncol = length(levels(test_data$FTR)))
 
-# Calculate overall accuracy
-accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
-cat("Overall Accuracy:", accuracy, "\n")
+# Ensure the column names match the levels of the response variable
+colnames(pred_prob_ridge) <- levels(test_data$FTR)
 
-# Calculate sensitivity and specificity for each class
-sensitivity <- numeric(length(levels(y_test)))
-specificity <- numeric(length(levels(y_test)))
+# Generate true labels for ROC computation
+test_labels <- model.matrix(~ test_data$FTR - 1)
+colnames(test_labels) <- levels(test_data$FTR)
 
-for (i in seq_along(levels(y_test))) {
-    class <- levels(y_test)[i]
-    
-    # True Positives
-    TP <- confusion_matrix[class, class]
-    
-    # False Negatives
-    FN <- sum(confusion_matrix[class, ]) - TP
-    
-    # False Positives
-    FP <- sum(confusion_matrix[, class]) - TP
-    
-    # True Negatives
-    TN <- sum(confusion_matrix) - (TP + FP + FN)
-    
-    # Calculate sensitivity and specificity
-    sensitivity[i] <- TP / (TP + FN)  # Sensitivity (True Positive Rate)
-    specificity[i] <- TN / (TN + FP)  # Specificity (True Negative Rate)
-    
-    cat("Class:", class, "\n")
-    cat("Sensitivity:", sensitivity[i], "\n")
-    cat("Specificity:", specificity[i], "\n")
-}
+# Plot the ROC curve for the Ridge model
+plot_roc(test_data, pred_prob_ridge, "Ridge Model")
+```
 
-# Print overall sensitivity and specificity
-cat("Overall Sensitivity:", mean(sensitivity), "\n")
-cat("Overall Specificity:", mean(specificity), "\n")
+```{r}
+# Extract metrics for each class from the Ridge confusion matrix
+specificity_awaywin_ridge <- conf_matrix_ridge$byClass["Class: Away Win", "Specificity"]
+sensitivity_awaywin_ridge <- conf_matrix_ridge$byClass["Class: Away Win", "Sensitivity"]
+
+specificity_draw_ridge <- conf_matrix_ridge$byClass["Class: Draw", "Specificity"]
+sensitivity_draw_ridge <- conf_matrix_ridge$byClass["Class: Draw", "Sensitivity"]
+
+specificity_homewin_ridge <- conf_matrix_ridge$byClass["Class: Home Win", "Specificity"]
+sensitivity_homewin_ridge <- conf_matrix_ridge$byClass["Class: Home Win", "Sensitivity"]
+
+accuracy_ridge <- conf_matrix_ridge$overall["Accuracy"]
+
+# Calculate overall metrics for the Ridge model
+overall_sensitivity_ridge <- mean(c(sensitivity_awaywin_ridge, sensitivity_draw_ridge, sensitivity_homewin_ridge))
+overall_specificity_ridge <- mean(c(specificity_awaywin_ridge, specificity_draw_ridge, specificity_homewin_ridge))
+overall_accuracy_ridge <- accuracy_ridge
+```
+
+```{r}
+# Combine Ridge metrics into a data frame
+metrics_ridge_overall <- data.frame(
+  Model = "Ridge Model",
+  Accuracy = overall_accuracy_ridge,
+  Sensitivity = overall_sensitivity_ridge,
+  Specificity = overall_specificity_ridge
+)
+
+# Add Ridge metrics to the comparison data frame
+comparison_df <- rbind(
+  comparison_df,
+  metrics_ridge_overall
+)
+
+# Print the updated comparison
+print(comparison_df)
 ```
 
 ## Naive Bayes
@@ -789,82 +897,86 @@ cat("Overall Specificity:", mean(specificity), "\n")
 Continuing with the analysis we try Naive Bayes algorithm. In this case we can’t use a model with interaction term since Naive Bayes do not support these relations. Thus we decide to use the Full Model. 
 
 ```{r}
-nb.fit <- naiveBayes(formula(multinom_model), data = train_data)
-nb.fit
+model_nb <- naiveBayes(FTR ~ ., data = train_data)
+model_nb
 ```
 
 Prediction for the test set:
 
 ```{r}
-nb.pred <- predict(nb.fit, newdata = test_data, type = "raw")
+# Get predicted probabilities for Naive Bayes model
+pred_prob_nb <- predict(model_nb, newdata = test_data, type = "raw")
+
 ```
 
 Let's plot the ROC :
 
 ```{r}
-# Naive Bayes model fitting
-nb.fit <- naiveBayes(formula(multinom_model), data = train_data)
+# Ensure the column names match the levels of the response variable
+colnames(pred_prob_nb) <- levels(test_data$FTR)
 
-# Predictions (raw probabilities for all classes)
-nb.pred <- predict(nb.fit, newdata = test_data, type = "raw")
+# Generate true labels for ROC computation
+test_labels <- model.matrix(~ test_data$FTR - 1)
+colnames(test_labels) <- levels(test_data$FTR)
 
-# Ensure FTR is a factor in the test data
-test_data$FTR <- as.factor(test_data$FTR)
+# Plot the ROC curve for the Naive Bayes model
+plot_roc(test_data, pred_prob_nb, "Naive Bayes Model")
+```
 
-# Validate response and predictor alignment
-if (!all(levels(test_data$FTR) %in% colnames(nb.pred))) {
-  stop("Mismatch between levels of test_data$FTR and columns in nb.pred")
-}
+```{r}
+# Get class predictions for the test set
+pred_class_nb <- predict(model_nb, newdata = test_data)
 
-# Calculate predicted classes by selecting the class with highest probability
-predicted_classes <- apply(nb.pred, 1, which.max)
-predicted_classes <- levels(test_data$FTR)[predicted_classes]  # Convert indices to class labels
+# Ensure both variables are factors with matching levels
+test_data$FTR <- factor(test_data$FTR)
+pred_class_nb <- factor(pred_class_nb, levels = levels(test_data$FTR))
 
-# Create confusion matrix
-confusion_matrix <- confusionMatrix(factor(predicted_classes, levels = levels(test_data$FTR)), test_data$FTR)
-print("Confusion Matrix:")
-print(confusion_matrix)
+# Generate confusion matrix
+conf_matrix_nb <- confusionMatrix(pred_class_nb, test_data$FTR)
 
-# Accuracy
-accuracy <- confusion_matrix$overall['Accuracy']
-cat("Accuracy:", accuracy, "\n")
+# Print the confusion matrix
+print(conf_matrix_nb)
+```
 
-# Sensitivity and Specificity for each class
-sensitivity <- confusion_matrix$byClass[, "Sensitivity"]
-specificity <- confusion_matrix$byClass[, "Specificity"]
+```{r}
+# Extract metrics for each class from the Naive Bayes confusion matrix
+specificity_awaywin_nb <- conf_matrix_nb$byClass["Class: Away Win", "Specificity"]
+sensitivity_awaywin_nb <- conf_matrix_nb$byClass["Class: Away Win", "Sensitivity"]
 
-cat("Sensitivity for each class:\n")
-print(sensitivity)
+specificity_draw_nb <- conf_matrix_nb$byClass["Class: Draw", "Specificity"]
+sensitivity_draw_nb <- conf_matrix_nb$byClass["Class: Draw", "Sensitivity"]
 
-cat("Specificity for each class:\n")
-print(specificity)
+specificity_homewin_nb <- conf_matrix_nb$byClass["Class: Home Win", "Specificity"]
+sensitivity_homewin_nb <- conf_matrix_nb$byClass["Class: Home Win", "Sensitivity"]
 
-# Loop through each class and generate individual ROC curves
-roc_curves <- list()
+accuracy_nb <- conf_matrix_nb$overall["Accuracy"]
 
-for (class in levels(test_data$FTR)) {
-  # Create a binary response for the current class
-  binary_response <- ifelse(test_data$FTR == class, 1, 0)
-  
-  # Compute the ROC curve
-  roc_curve <- roc(binary_response, nb.pred[, class])
-  roc_curves[[class]] <- roc_curve
-  
-  # Plot the ROC curve for the current class
-  plot.roc(
-    roc_curve, 
-    lwd = 2, 
-    main = paste("ROC Curve for Class:", class),
-    print.auc = TRUE
-  )
-  
-}
+# Calculate overall metrics for the Naive Bayes model
+overall_sensitivity_nb <- mean(c(sensitivity_awaywin_nb, sensitivity_draw_nb, sensitivity_homewin_nb))
+overall_specificity_nb <- mean(c(specificity_awaywin_nb, specificity_draw_nb, specificity_homewin_nb))
+overall_accuracy_nb <- accuracy_nb
+```
+
+```{r}
+# Combine Naive Bayes metrics into a data frame
+metrics_nb_overall <- data.frame(
+  Model = "Naive Bayes",
+  Accuracy = overall_accuracy_nb,
+  Sensitivity = overall_sensitivity_nb,
+  Specificity = overall_specificity_nb
+)
+
+# Add Naive Bayes metrics to the comparison data frame
+comparison_df <- rbind(
+  comparison_df,
+  metrics_nb_overall
+)
 
 ```
 
 ## Conclusion
 
 ```{r}
-print(roc_results)
+print(comparison_df)
 ```
 
