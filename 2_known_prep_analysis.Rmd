@@ -980,3 +980,40 @@ comparison_df <- rbind(
 print(comparison_df)
 ```
 
+Let’s find the best model for all the metrics:
+
+1. Accuracy
+
+```{r}
+best_accuracy <- comparison_df[which.max(comparison_df$Accuracy), ]
+print(best_accuracy)
+```
+
+The best model in terms of accuracy is “Full Model”.
+
+2. Sensitivity
+
+```{r}
+best_sensitivity <- comparison_df[which.max(comparison_df$Sensitivity), ]
+print(best_sensitivity)
+```
+
+The best model in terms of sensitivity is “Full Interaction Model”.
+
+
+3. Specificity
+
+```{r}
+best_specificity <- comparison_df[which.max(comparison_df$Specificity), ]
+print(best_specificity)
+```
+
+The best model in terms of specificity is “Stepwise Model”.
+
+However, recalling the unbalanced problem, our choice of the top three overall models is as follows:
+
+1. **Full Model**: This model has a good balance of accuracy and sensitivity, making it effective at identifying positive cases while maintaining reasonable specificity.
+
+2. **Full Interaction Model**: This model has the highest sensitivity, which is crucial for unbalanced datasets where identifying the minority class is often more important than overall accuracy.
+
+3. **Cleaned Model**: This model provides a good balance between sensitivity and specificity, making it a strong candidate for scenarios where both false positives and false negatives need to be minimized.
