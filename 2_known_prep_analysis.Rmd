@@ -214,11 +214,9 @@ plot_roc <- function(test_data, prob_matrix, model_name) {
     roc(test_data$FTR == colnames(prob_matrix)[i], prob_matrix[, i])
   })
   
-  # Extract AUC values
   auc_values <- sapply(roc_list, function(r) auc(r))
   class_names <- colnames(prob_matrix)
   
-  # Prepare data for ggplot
   roc_data <- do.call(rbind, lapply(1:length(roc_list), function(i) {
     data.frame(
       Specificity = 1 - roc_list[[i]]$specificities,
@@ -227,23 +225,31 @@ plot_roc <- function(test_data, prob_matrix, model_name) {
     )
   }))
   
-  # Plot using ggplot
-  ggplot(data = roc_data, aes(x = Specificity, y = Sensitivity, color = Class)) +
-    geom_line(size = 1) +
-    labs(
-      title = paste("ROC Curve for", model_name),
-      subtitle = paste("AUC:", 
-                       paste(class_names, round(auc_values, 3), collapse = ", ")),
-      x = "1 - Specificity",
-      y = "Sensitivity"
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(size = 14, face = "bold"),
-          plot.subtitle = element_text(size = 12),
-          legend.title = element_text(size = 12),
-          legend.text = element_text(size = 10)) +
-    scale_color_brewer(palette = "Set1")
+  plots <- lapply(class_names, function(class_name) {
+    class_data <- roc_data[roc_data$Class == class_name, ]
+    
+    ggplot(data = class_data, aes(x = Specificity, y = Sensitivity)) +
+      geom_line(color = "black", size = 1) + 
+      geom_point(color = "black") +  
+      labs(
+        title = paste("ROC Curve for", model_name, "-", class_name),
+        x = "1 - Specificity",
+        y = "Sensitivity"
+      ) +
+      theme_minimal() +
+      theme(plot.title = element_text(size = 14, face = "bold"),
+            plot.subtitle = element_text(size = 12)) +
+      scale_color_brewer(palette = "Set1") +
+      annotate("text", x = 0.5, y = 0.1, 
+               label = paste("AUC:", round(auc(roc(test_data$FTR == class_name, prob_matrix[, which(class_names == class_name)])), 3)), 
+               size = 5, hjust = 0.5)
+  })
+  
+  for (p in plots) {
+    print(p)
+  }
 }
+
 
 # Compute probabilities for each model
 prob_multinom_model <- predict(multinom_model, test_data, type = "prob")
@@ -278,57 +284,60 @@ roc_list_clean_inter <- lapply(1:ncol(prob_multinom_model.clean.inter), function
   roc(test_data$FTR == colnames(prob_multinom_model.clean.inter)[i], prob_multinom_model.clean.inter[, i])
 })
 
-# Extract best thresholds and metrics for each class
+# Extract metrics for each ROC curve
 extract_metrics <- function(roc_list) {
-  lapply(roc_list, function(r) coords(r, x = "best", ret = c("threshold", "specificity", "sensitivity", "accuracy")))
+  lapply(roc_list, function(r) {
+    # Get the best coordinates (threshold, specificity, sensitivity, accuracy)
+    coords(r, x = "best", ret = c("threshold", "specificity", "sensitivity", "accuracy"))
+  })
 }
 
+# Extract metrics for each model
 roc_metrics_full <- extract_metrics(roc_list_full)
 roc_metrics_full_inter <- extract_metrics(roc_list_full_inter)
 roc_metrics_clean <- extract_metrics(roc_list_clean)
 roc_metrics_clean_inter <- extract_metrics(roc_list_clean_inter)
+
 ```
 
 Rename the single row for each dataframe and concatenate all in a single one.
 
 ```{r}
-# Combine metrics for each model
+# Combine metrics for each model into a data frame
 combine_metrics <- function(roc_metrics_list) {
+  # Bind the list of data frames into one
   metrics <- do.call(rbind, roc_metrics_list)
-  rownames(metrics) <- colnames(prob_multinom_model)
-  metrics
+  rownames(metrics) <- colnames(prob_multinom_model)  # Set class names as row names
+  return(metrics)
 }
 
+# Combine metrics for all models
 roc_metrics_full <- combine_metrics(roc_metrics_full)
 roc_metrics_full_inter <- combine_metrics(roc_metrics_full_inter)
 roc_metrics_clean <- combine_metrics(roc_metrics_clean)
 roc_metrics_clean_inter <- combine_metrics(roc_metrics_clean_inter)
 
-# Combine all metrics into a single dataframe
-roc_results <- rbind(
-  roc_metrics_full,
-  roc_metrics_full_inter,
-  roc_metrics_clean,
-  roc_metrics_clean_inter
-)
 ```
 
 Now we make a comparisons result: 
 
 ```{r}
-# Compute average metrics across classes for each model
+# Compute average metrics (across classes) for each model
 average_metrics <- function(metrics) {
   colMeans(metrics, na.rm = TRUE)
 }
 
+# Calculate average metrics for each model
 average_metrics_full <- average_metrics(roc_metrics_full)
 average_metrics_full_inter <- average_metrics(roc_metrics_full_inter)
 average_metrics_clean <- average_metrics(roc_metrics_clean)
 average_metrics_clean_inter <- average_metrics(roc_metrics_clean_inter)
 
-# Combine all model metrics into a single dataframe
+
+# Combine into a single data frame with model names and metrics
 comparison_df <- data.frame(
-  Model = c("Full Model", "Full Interaction Model", "Cleaned Model", "Cleaned Interaction Model"),
+  Model = rep(c("Full Model", "Full Interaction Model", "Cleaned Model", "Cleaned Interaction Model"), each = 3),
+  Class = rep(c("Away Win", "Draw", "Home Win"), times = 4),
   Accuracy = c(average_metrics_full["accuracy"], 
                average_metrics_full_inter["accuracy"],
                average_metrics_clean["accuracy"], 
@@ -343,8 +352,9 @@ comparison_df <- data.frame(
                   average_metrics_clean_inter["specificity"])
 )
 
-# Print the comparison table
+# Print the comparison data frame
 print(comparison_df)
+
 ```
 
 The Full Model is best for accuracy, the Full Interaction Model excels in sensitivity, and the Cleaned Model performs best in specificity. We can see that the response is unbalanced.
@@ -461,7 +471,7 @@ print(conf_matrix_stepwise)
 Let's compare it with other models
 
 ```{r}
-# Extract metrics for each class
+# Extract metrics for each class from the confusion matrix
 specificity_awaywin <- conf_matrix_stepwise$byClass["Class: Away Win", "Specificity"]
 sensitivity_awaywin <- conf_matrix_stepwise$byClass["Class: Away Win", "Sensitivity"]
 
@@ -473,31 +483,24 @@ sensitivity_homewin <- conf_matrix_stepwise$byClass["Class: Home Win", "Sensitiv
 
 accuracy_stepwise <- conf_matrix_stepwise$overall["Accuracy"]
 
-# Overall Sensitivity
-overall_sensitivity <- mean(c(sensitivity_awaywin, sensitivity_draw, sensitivity_homewin))
-
-# Overall Specificity
-overall_specificity <- mean(c(specificity_awaywin, specificity_draw, specificity_homewin))
-
-# Overall Accuracy
-overall_accuracy <- accuracy_stepwise
-
-# Combine these metrics into a single data frame
-metrics_stepwise_overall <- data.frame(
-  Model = "Stepwise Model",
-  Accuracy = overall_accuracy,
-  Sensitivity = overall_sensitivity,  
-  Specificity = overall_specificity 
+# Combine these metrics into a single data frame for each class
+metrics_stepwise <- data.frame(
+  Model = rep("Stepwise Model", 3),
+  Class = c("Away Win", "Draw", "Home Win"),
+  Accuracy = c(accuracy_stepwise, accuracy_stepwise, accuracy_stepwise),  # Assuming accuracy is the same for all classes
+  Sensitivity = c(sensitivity_awaywin, sensitivity_draw, sensitivity_homewin),
+  Specificity = c(specificity_awaywin, specificity_draw, specificity_homewin),
+  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
 )
 
+# Combine with the existing comparison_df
 comparison_df <- rbind(
   comparison_df,  
-  metrics_stepwise_overall
+  metrics_stepwise
 )
 
 # Print the comparison
 print(comparison_df)
-
 ```
 
 ### Lasso Regression
@@ -666,29 +669,23 @@ sensitivity_homewin_lasso <- conf_matrix_lasso$byClass["Class: Home Win", "Sensi
 
 accuracy_lasso <- conf_matrix_lasso$overall["Accuracy"]
 
-# Calculate overall metrics for the LASSO model
-overall_sensitivity_lasso <- mean(c(sensitivity_awaywin_lasso, sensitivity_draw_lasso, sensitivity_homewin_lasso))
-overall_specificity_lasso <- mean(c(specificity_awaywin_lasso, specificity_draw_lasso, specificity_homewin_lasso))
-overall_accuracy_lasso <- accuracy_lasso
-
-```
-
-```{r}
-# Combine LASSO metrics into a data frame
-metrics_lasso_overall <- data.frame(
-  Model = "LASSO Model",
-  Accuracy = overall_accuracy_lasso,
-  Sensitivity = overall_sensitivity_lasso,
-  Specificity = overall_specificity_lasso
+# Combine these metrics into a single data frame for each class
+metrics_lasso <- data.frame(
+  Model = rep("LASSO Model", 3),
+  Class = c("Away Win", "Draw", "Home Win"),
+  Accuracy = c(accuracy_lasso, accuracy_lasso, accuracy_lasso),  # Assuming accuracy is the same for all classes
+  Sensitivity = c(sensitivity_awaywin_lasso, sensitivity_draw_lasso, sensitivity_homewin_lasso),
+  Specificity = c(specificity_awaywin_lasso, specificity_draw_lasso, specificity_homewin_lasso),
+  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
 )
 
-# Add LASSO metrics to the comparison data frame
+# Combine with the existing comparison_df
 comparison_df <- rbind(
-  comparison_df,
-  metrics_lasso_overall
+  comparison_df,  
+  metrics_lasso
 )
 
-# Print the updated comparison
+# Print the comparison
 print(comparison_df)
 ```
 
@@ -745,8 +742,11 @@ modelcv_bestlam.ridge
 Now visualize again the ridge estimates as a function of the logarithm of λ and add a vertical line corresponding to best.lambda:
 
 ```{r}
+
 plot(model_fit.ridge, xvar = "lambda", label = TRUE)
-abline(v = log(modelcv_bestlam.ridge), lwd = 1.2, lty = "dashed")
+
+abline(v = log(modelcv_bestlam.ridge), lwd = 1.2, lty = "dashed", col = "red")
+
 ```
 
 These are the coefficients:
@@ -867,28 +867,23 @@ sensitivity_homewin_ridge <- conf_matrix_ridge$byClass["Class: Home Win", "Sensi
 
 accuracy_ridge <- conf_matrix_ridge$overall["Accuracy"]
 
-# Calculate overall metrics for the Ridge model
-overall_sensitivity_ridge <- mean(c(sensitivity_awaywin_ridge, sensitivity_draw_ridge, sensitivity_homewin_ridge))
-overall_specificity_ridge <- mean(c(specificity_awaywin_ridge, specificity_draw_ridge, specificity_homewin_ridge))
-overall_accuracy_ridge <- accuracy_ridge
-```
-
-```{r}
-# Combine Ridge metrics into a data frame
-metrics_ridge_overall <- data.frame(
-  Model = "Ridge Model",
-  Accuracy = overall_accuracy_ridge,
-  Sensitivity = overall_sensitivity_ridge,
-  Specificity = overall_specificity_ridge
+# Combine these metrics into a single data frame for each class
+metrics_ridge <- data.frame(
+  Model = rep("Ridge Model", 3),
+  Class = c("Away Win", "Draw", "Home Win"),
+  Accuracy = c(accuracy_ridge, accuracy_ridge, accuracy_ridge),  # Assuming accuracy is the same for all classes
+  Sensitivity = c(sensitivity_awaywin_ridge, sensitivity_draw_ridge, sensitivity_homewin_ridge),
+  Specificity = c(specificity_awaywin_ridge, specificity_draw_ridge, specificity_homewin_ridge),
+  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
 )
 
-# Add Ridge metrics to the comparison data frame
+# Combine with the existing comparison_df
 comparison_df <- rbind(
-  comparison_df,
-  metrics_ridge_overall
+  comparison_df,  
+  metrics_ridge
 )
 
-# Print the updated comparison
+# Print the comparison
 print(comparison_df)
 ```
 
@@ -951,26 +946,24 @@ sensitivity_homewin_nb <- conf_matrix_nb$byClass["Class: Home Win", "Sensitivity
 
 accuracy_nb <- conf_matrix_nb$overall["Accuracy"]
 
-# Calculate overall metrics for the Naive Bayes model
-overall_sensitivity_nb <- mean(c(sensitivity_awaywin_nb, sensitivity_draw_nb, sensitivity_homewin_nb))
-overall_specificity_nb <- mean(c(specificity_awaywin_nb, specificity_draw_nb, specificity_homewin_nb))
-overall_accuracy_nb <- accuracy_nb
-```
-
-```{r}
-# Combine Naive Bayes metrics into a data frame
-metrics_nb_overall <- data.frame(
-  Model = "Naive Bayes",
-  Accuracy = overall_accuracy_nb,
-  Sensitivity = overall_sensitivity_nb,
-  Specificity = overall_specificity_nb
+# Combine these metrics into a single data frame for each class
+metrics_nb <- data.frame(
+  Model = rep("Naive Bayes", 3),
+  Class = c("Away Win", "Draw", "Home Win"),
+  Accuracy = c(accuracy_nb, accuracy_nb, accuracy_nb),  # Assuming accuracy is the same for all classes
+  Sensitivity = c(sensitivity_awaywin_nb, sensitivity_draw_nb, sensitivity_homewin_nb),
+  Specificity = c(specificity_awaywin_nb, specificity_draw_nb, specificity_homewin_nb),
+  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
 )
 
-# Add Naive Bayes metrics to the comparison data frame
+# Combine with the existing comparison_df
 comparison_df <- rbind(
-  comparison_df,
-  metrics_nb_overall
+  comparison_df,  
+  metrics_nb
 )
+
+# Print the comparison
+print(comparison_df)
 
 ```
 
