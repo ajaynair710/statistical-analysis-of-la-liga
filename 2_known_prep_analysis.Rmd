@@ -978,35 +978,52 @@ Let’s find the best model for all the metrics:
 1. Accuracy
 
 ```{r}
-best_accuracy <- comparison_df[which.max(comparison_df$Accuracy), ]
-print(best_accuracy)
+best_models_accuracy <- comparison_df %>%
+  group_by(Class) %>%
+  slice(which.max(Accuracy)) %>%
+  ungroup()  
+
+print(best_models_accuracy)
 ```
 
-The best model in terms of accuracy is “Full Model”.
+The best model in terms of accuracy is the **Full Model** for the class "Away Win," the **Full Interaction Model** for the class "Draw," and the **Cleaned Model** for the class "Home Win."
 
 2. Sensitivity
 
 ```{r}
-best_sensitivity <- comparison_df[which.max(comparison_df$Sensitivity), ]
-print(best_sensitivity)
+best_models_sensitivity <- comparison_df %>%
+  group_by(Class) %>%
+  slice(which.max(Sensitivity)) %>%
+  ungroup()  
+
+print(best_models_sensitivity)
 ```
 
-The best model in terms of sensitivity is “Full Interaction Model”.
-
+The best model in terms of sensitivity is the **Cleaned Interaction Model** for the class "Away Win," the **Full Model** for the class "Draw," and the **Stepwise Model** for the class "Home Win."
 
 3. Specificity
 
 ```{r}
-best_specificity <- comparison_df[which.max(comparison_df$Specificity), ]
-print(best_specificity)
+best_models_specificity <- comparison_df %>%
+  group_by(Class) %>%
+  slice(which.max(Specificity)) %>%
+  ungroup()  
+
+print(best_models_specificity)
 ```
 
-The best model in terms of specificity is “Stepwise Model”.
+The best model in terms of specificity is the **Stepwise Model** for the class "Away Win," the **LASSO Model** for the class "Draw," and the **Naive Bayes** for the class "Home Win."
 
 However, recalling the unbalanced problem, our choice of the top three overall models is as follows:
 
-1. **Full Model**: This model has a good balance of accuracy and sensitivity, making it effective at identifying positive cases while maintaining reasonable specificity.
+1. **Full Model**: This model demonstrates strong performance across all classes, particularly in accuracy and sensitivity for the Away Win and Home Win classes.
 
-2. **Full Interaction Model**: This model has the highest sensitivity, which is crucial for unbalanced datasets where identifying the minority class is often more important than overall accuracy.
+2. **Full Interaction Model**: This model also performs well, especially for the Draw class, indicating its effectiveness in capturing interactions between predictors.
 
-3. **Cleaned Model**: This model provides a good balance between sensitivity and specificity, making it a strong candidate for scenarios where both false positives and false negatives need to be minimized.
+3. **Cleaned Model**: This model shows competitive performance, particularly for the Home Win class, suggesting that it effectively balances complexity and interpretability.
+
+## Saving the model
+
+```{r}
+saveRDS(multinom_model, "./model/model_file.rds")
+```
