@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Requirements
 
 ```{r requirements, results='hide'}
-requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret", "gridExtra", "effects", "nnet", "ggplot2", "reshape2")
+requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "caret", "gridExtra", "effects", "nnet", "ggplot2", "reshape2", "MASS")
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
@@ -887,7 +887,110 @@ comparison_df <- rbind(
 print(comparison_df)
 ```
 
-## Naive Bayes
+### Linear Discriminant Analysis
+
+Now we are going to deal with LDA or Linear Discriminant Analysis. For this type of Generative Model we decide to again use the full model.
+
+```{r}
+# Prepare the data for the training set
+x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
+x_train_scaled <- scale(x_train)
+
+# Prepare the data for the test set
+x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
+
+# Align columns between training and test sets
+common_columns <- intersect(colnames(x_train), colnames(x_test))
+x_test <- x_test[, common_columns, drop = FALSE]                  
+x_train <- x_train[, common_columns, drop = FALSE]                
+
+# Rescale the training data
+x_train_scaled <- scale(x_train)
+
+# Scale the test set using training set scaling parameters
+x_test_scaled <- scale(x_test, 
+                       center = attr(x_train_scaled, "scaled:center"), 
+                       scale = attr(x_train_scaled, "scaled:scale"))
+
+# Fit LDA model
+lda_model <- lda(FTR ~ ., data = data.frame(x_train_scaled, FTR = train_data$FTR))
+
+```
+
+```{r}
+# Make predictions on the test set
+pred_class_lda <- predict(lda_model, newdata = data.frame(x_test_scaled))$class
+
+# Check predictions
+cat("Predicted classes:\n")
+print(table(pred_class_lda))
+
+# Ensure both variables are factors with matching levels
+test_data$FTR <- factor(test_data$FTR)
+pred_class_lda <- factor(pred_class_lda, levels = levels(test_data$FTR))
+
+# Verify overlap
+cat("\nOverlap in levels:\n")
+print(intersect(levels(pred_class_lda), levels(test_data$FTR)))
+```
+
+```{r}
+# Generate the confusion matrix for LDA model
+conf_matrix_lda <- confusionMatrix(pred_class_lda, test_data$FTR)
+
+# Print the confusion matrix
+print(conf_matrix_lda)
+```
+
+```{r}
+# Extract metrics for each class from the LDA confusion matrix
+specificity_awaywin_lda <- conf_matrix_lda$byClass["Class: Away Win", "Specificity"]
+sensitivity_awaywin_lda <- conf_matrix_lda$byClass["Class: Away Win", "Sensitivity"]
+
+specificity_draw_lda <- conf_matrix_lda$byClass["Class: Draw", "Specificity"]
+sensitivity_draw_lda <- conf_matrix_lda$byClass["Class: Draw", "Sensitivity"]
+
+specificity_homewin_lda <- conf_matrix_lda$byClass["Class: Home Win", "Specificity"]
+sensitivity_homewin_lda <- conf_matrix_lda$byClass["Class: Home Win", "Sensitivity"]
+
+accuracy_lda <- conf_matrix_lda$overall["Accuracy"]
+
+# Combine these metrics into a single data frame for each class
+metrics_lda <- data.frame(
+  Model = rep("LDA Model", 3),
+  Class = c("Away Win", "Draw", "Home Win"),
+  Accuracy = c(accuracy_lda, accuracy_lda, accuracy_lda),  # Assuming accuracy is the same for all classes
+  Sensitivity = c(sensitivity_awaywin_lda, sensitivity_draw_lda, sensitivity_homewin_lda),
+  Specificity = c(specificity_awaywin_lda, specificity_draw_lda, specificity_homewin_lda),
+  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
+)
+
+# Combine with the existing comparison_df
+comparison_df <- rbind(
+  comparison_df,  
+  metrics_lda
+)
+
+# Print the comparison
+print(comparison_df)
+```
+
+```{r}
+# Get predicted probabilities for LDA model
+pred_prob_lda <- predict(lda_model, newdata = data.frame(x_test_scaled))$posterior
+
+# Ensure the column names match the levels of the response variable
+colnames(pred_prob_lda) <- levels(test_data$FTR)
+
+# Generate true labels for ROC computation
+test_labels <- model.matrix(~ test_data$FTR - 1)
+colnames(test_labels) <- levels(test_data$FTR)
+
+# Plot the ROC curve for the LDA model
+plot_roc(test_data, pred_prob_lda, "LDA Model")
+```
+
+### Naive Bayes
 
 Continuing with the analysis we try Naive Bayes algorithm. In this case we can’t use a model with interaction term since Naive Bayes do not support these relations. Thus we decide to use the Full Model. 
 
