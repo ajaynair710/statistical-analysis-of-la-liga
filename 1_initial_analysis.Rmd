@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Requirements
 
 ```{r requirements}
-requirements=c("tidyverse","mice", "caTools", "corrplot", "summarytools", "plotly")
+requirements=c("tidyverse","mice", "caTools", "corrplot", "summarytools", "plotly", "readr", "caret")
 
 for (req in requirements){
   if (!require(req, character.only = TRUE)){
@@ -63,10 +63,6 @@ The different information of each match collected on the dataset is described in
 
 ## Analysis description
 
-This analysis is based on a binary classification task: Can Barcelona win the LaLiga 2024-2025 season title?
-
-Specifically, I will answer the following questions:
-
 - To identify trends and patterns in match outcomes over the past 10 seasons of La Liga.
 - To explore the impact of various factors such as home advantage, team form, and disciplinary actions on match results.
 - To investigate any correlations between specific match statistics and overall team performance throughout the dataset period.
@@ -79,13 +75,8 @@ The CSV file downloaded from the website contains data for each season of the Sp
 I filtered out qualitative variables and statistics related to betting from the dataset, retaining only the essential match statistics for subsequent analysis.
 
 ```{r}
-# Load the required library
-library(readr)
-
 # Read the dataset from the CSV file
 football_data <- read_csv("./dataset.csv")
-
-# Preview the first few rows of the dataset
 head(football_data)
 ```
 
@@ -108,8 +99,6 @@ summary(football_data)
 Distribution of Match Outcomes
 
 ```{r}
-library(plotly)
-# Plot the distribution of match results
 p1 <- ggplot(football_data, aes(x = FTR)) +
   geom_bar(fill = "lightblue", color = "black") + 
   labs(title = "Distribution of Match Results", x = "Match Outcome", y = "Count") +
@@ -124,7 +113,7 @@ p1_interactive
 Goals Scored Distribution
 
 ```{r}
-# Histogram of Home Team Goals
+# Home Team Goals
 p2 <- ggplot(football_data, aes(x = FTHG)) +
   geom_histogram(aes(text = ..count..), bins = 10, fill = "green", alpha = 0.7, color = "black") +  
   labs(title = "Distribution of Home Team Goals", x = "Goals", y = "Count") +
@@ -135,7 +124,7 @@ p2_interactive <- ggplotly(p2, tooltip = "text")
 
 p2_interactive
 
-# Histogram of Away Team Goals
+# Away Team Goals
 p3 <- ggplot(football_data, aes(x = FTAG)) +
   geom_histogram(aes(text = ..count..), bins = 10, fill = "red", alpha = 0.7, color = "black") +  
   labs(title = "Distribution of Away Team Goals", x = "Goals", y = "Count") +
@@ -163,7 +152,7 @@ ggplotly(p_home_advantage, tooltip = "text")
 
 Goals vs. Match Outcome
 ```{r}
-# Boxplot of Home Goals vs. Match Outcome
+# Home Goals vs. Match Outcome
 p_home_goals <- ggplot(football_data, aes(x = FTR, y = FTHG)) +
   geom_boxplot(aes(text = paste("Home Goals: ", FTHG)), fill = "lightblue", color = "black") +  
   labs(title = "Home Goals vs. Match Outcome", x = "Match Outcome", y = "Home Goals") +
@@ -173,7 +162,7 @@ p_home_goals <- ggplot(football_data, aes(x = FTR, y = FTHG)) +
 ggplotly(p_home_goals, tooltip = "text")
 
 
-# Boxplot of Away Goals vs. Match Outcome
+# Away Goals vs. Match Outcome
 p_away_goals <- ggplot(football_data, aes(x = FTR, y = FTAG)) +
   geom_boxplot(aes(text = paste("Away Goals: ", FTAG)), fill = "lightgreen", color = "black") +  
   labs(title = "Away Goals vs. Match Outcome", x = "Match Outcome", y = "Away Goals") +
@@ -185,21 +174,19 @@ ggplotly(p_away_goals, tooltip = "text")
 
 ```
 
-# Multivariate Analysis
 
-## Shots and Match Outcome
+Shots and Match Outcome
 
 We will analyze the relationship between shits and match results by visualizing the number of home and away shots for each match outcome.
 
-```{r corner_kicks_analysis}
-library(plotly)
-# Interactive Boxplot for Home Shots vs. Match Outcome
+```{r}
+# Home Team Shots vs. Match Outcome
 home_shots_plot <- ggplot(football_data, aes(x = FTR, y = HS)) +
   geom_boxplot(aes(fill = FTR)) +
   labs(title = "Home Team Shots vs. Match Outcome", x = "Full Time Result", y = "Home Team Shots")
 ggplotly(home_shots_plot)
 
-# Interactive Boxplot for Away Shots vs. Match Outcome
+# Away Team Shots vs. Match Outcome
 away_shots_plot <- ggplot(football_data, aes(x = FTR, y = AS)) +
   geom_boxplot(aes(fill = FTR)) +
   labs(title = "Away Team Shots vs. Match Outcome", x = "Full Time Result", y = "Away Team Shots")
@@ -210,13 +197,12 @@ ggplotly(away_shots_plot)
 # Correlation Matrix
 
 ```{r}
-# Select numeric columns for correlation analysis
 numeric_columns <- football_data[, c("FTHG", "FTAG", "HS", "AS", "HST", "AST", "HF", "AF", "HC", "AC", "HY", "AY", "HR", "AR")]
 
-# Compute correlation matrix
+# correlation matrix
 cor_matrix <- cor(numeric_columns, use = "complete.obs")
 
-# Interactive Correlation Heatmap
+# Correlation Heatmap
 heatmap_plot <- plot_ly(
   z = cor_matrix,
   x = colnames(cor_matrix),
@@ -247,7 +233,7 @@ cat(teams, sep = "\n")
 
 # Team Analysis
 
-To begin the analysis, I have decided to start with only one team to simplify the operations. In further parts of the project, I will be managing data from all teams. In this case, I have selected **FC Barcelona** as my team to analyze. The information is split into two different dataframes: one for the matches played as the Home Team and the other for the matches played as the Away Team. For the sake of order, I have divided each operation into different functions.
+To begin the analysis, I have decided to start with only one team to simplify the operations. In this case, I have selected **FC Barcelona** as my team to analyze. The information is split into two different dataframes: one for the matches played as the Home Team and the other for the matches played as the Away Team. For the sake of order, I have divided each operation into different functions.
 
 ```{r}
 # Filter Barcelona's matches from the dataset
@@ -265,7 +251,7 @@ barca_away <- barcelona_matches %>%
 Aggregate statistics are calculated for matches where Barcelona played at home and away. This includes total fouls, red/yellow cards, shots, and shots on target.
 
 ```{r}
-# Aggregate statistics for home matches
+# for home matches
 barca_home_summary <- barca_home %>%
   summarize(
     TotalFouls = sum(HF),
@@ -275,7 +261,7 @@ barca_home_summary <- barca_home %>%
     TotalShotsOnTarget = sum(HST)
   )
 
-# Aggregate statistics for away matches
+# for away matches
 barca_away_summary <- barca_away %>%
   summarize(
     TotalFouls = sum(AF),
@@ -285,7 +271,6 @@ barca_away_summary <- barca_away %>%
     TotalShotsOnTarget = sum(AST)
   )
 
-# Display summaries
 print(barca_home_summary)
 print(barca_away_summary)
 
@@ -312,13 +297,12 @@ A bar plot is created with custom colors and labels for each statistic. This sho
 
 ```{r}
 # Define custom color palette for the plot
-my_colors <- c("TotalFouls" = "#1f77b4",           # Blue for Total Fouls
-               "TotalRedCards" = "red",            # Red for Total Red Cards
-               "TotalYellowCards" = "yellow",      # Yellow for Total Yellow Cards
-               "TotalShots" = "#2ca02c",           # Green for Total Shots
-               "TotalShotsOnTarget" = "violet")    # Violet for Total Shots on Target
+my_colors <- c("TotalFouls" = "#1f77b4",          
+               "TotalRedCards" = "red",           
+               "TotalYellowCards" = "yellow",      
+               "TotalShots" = "#2ca02c",          
+               "TotalShotsOnTarget" = "violet")    
 
-# Create ggplot
 bar_plot <- ggplot(combined_summary_long, aes(x = MatchType, y = Count, fill = Statistic, label = Count)) +
   geom_bar(stat = "identity", position = position_dodge(), color = "black") +
   geom_text(position = position_dodge(width = 0.9), vjust = -0.5, size = 3, 
@@ -332,10 +316,7 @@ bar_plot <- ggplot(combined_summary_long, aes(x = MatchType, y = Count, fill = S
         axis.title.y = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
 
-# Convert ggplot to an interactive plotly plot
 interactive_plot <- ggplotly(bar_plot)
-
-# Display the interactive plot
 interactive_plot
 ```
 
@@ -352,9 +333,6 @@ df_corr <- football_data[, sapply(football_data, is.numeric)]
 
 # Create the correlation matrix using Pearson's method
 df_corr.cor <- cor(df_corr, method = "pearson")
-
-# Load the corrplot package
-library(corrplot)
 
 # Define color palette for heatmap
 palette <- colorRampPalette(c("green", "white", "red"))(20)
@@ -389,7 +367,6 @@ This step involves identifying and removing multicollinear variables from the da
 ## Prepare the Input Dataset
 
 ```{r}
-# Select columns for input data
 input_data <- football_data[c(1:3, 6:21)]
 ```
 
@@ -398,20 +375,15 @@ input_data <- football_data[c(1:3, 6:21)]
 Now we split the data into a 70% training dataset and a 30% test dataset.
 
 ```{r}
-# Load caret package
-library(caret)
-
 # Set seed for reproducibility
 set.seed(123)
 
 # Split index creation
 index <- createDataPartition(input_data$FTR, p = 0.7, list = FALSE)
 
-# Create training and testing datasets
 train_data <- input_data[index, ]
 test_data <- input_data[-index, ]
 
-# Export the datasets to CSV files
 write.csv(train_data, "./training/training.csv", row.names = FALSE) 
 write.csv(test_data, "./testing/test.csv", row.names = FALSE)
 
