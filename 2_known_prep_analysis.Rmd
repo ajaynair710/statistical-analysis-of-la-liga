@@ -28,7 +28,7 @@ for (req in requirements){
 
 # Analysis Description
 
-This analysis focuses on building and evaluating predictive models using logistic regression and Naive Bayes for the dataset. The dataset comprises training and testing data that was splitted in the previous stage. Logistic regression and Naive Bayes is employed to predict outcomes based on a set of predictor variables. The objective is to assess the predictive performance of the models and evaluate their ability to classify outcomes accurately.
+This analysis focuses on building and evaluating predictive models using logistic regression, Linear Discriminant Analysis and Naive Bayes for the dataset. The dataset comprises training and testing data that was splitted in the previous stage.The objective is to assess the predictive performance of the models and evaluate their ability to classify outcomes accurately.
 
 # Loading data
 
@@ -48,14 +48,10 @@ The logistic regression analysis involves two main stages: model building and ev
 # Relevel reference level as "Draw"
 train_data$FTR <- relevel(factor(train_data$FTR), ref = "Draw")
 
-library(nnet)
-
 # Fit initial model
 multinom_model <- multinom(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)
 
-# Summary
 summary(multinom_model)
-
 ```
 
 ### Key Findings:
@@ -176,7 +172,6 @@ summary(multinom_model)
 ```
 
 ```{r}
-# Plot the effects for 4 interactionless variables from the multinom_model
 
 # Plot for HTHG (Home Team Home Goals)
 a <- effect("HTHG", multinom_model)
@@ -203,12 +198,10 @@ As we can see, if Half Time Home Team Goals (HTHG) are greater than 3, the proba
 Let’s compare all the models done so far in terms of prediction power to be able to compare them with other types of models:
 
 ```{r}
-# Load the test dataset
 test_data <- read.csv("testing/test.csv")
 ```
 
 ```{r}
-# Function to plot ROC curves for a model
 plot_roc <- function(test_data, prob_matrix, model_name) {
   roc_list <- lapply(1:ncol(prob_matrix), function(i) {
     roc(test_data$FTR == colnames(prob_matrix)[i], prob_matrix[, i])
@@ -217,19 +210,17 @@ plot_roc <- function(test_data, prob_matrix, model_name) {
   auc_values <- sapply(roc_list, function(r) auc(r))
   class_names <- colnames(prob_matrix)
   
-  roc_data <- do.call(rbind, lapply(1:length(roc_list), function(i) {
-    data.frame(
-      Specificity = 1 - roc_list[[i]]$specificities,
-      Sensitivity = roc_list[[i]]$sensitivities,
-      Class = class_names[i]
-    )
-  }))
-  
-  plots <- lapply(class_names, function(class_name) {
-    class_data <- roc_data[roc_data$Class == class_name, ]
+  for (i in 1:length(roc_list)) {
+    class_name <- class_names[i]
+    class_roc <- roc_list[[i]]
     
-    ggplot(data = class_data, aes(x = Specificity, y = Sensitivity)) +
-      geom_line(color = "black", size = 1) + 
+    roc_data <- data.frame(
+      Specificity = 1 - class_roc$specificities,
+      Sensitivity = class_roc$sensitivities
+    )
+    
+    p <- ggplot(data = roc_data, aes(x = Specificity, y = Sensitivity)) +
+      geom_line(size = 1, color = "black") + 
       geom_point(color = "black") +  
       labs(
         title = paste("ROC Curve for", model_name, "-", class_name),
@@ -239,13 +230,10 @@ plot_roc <- function(test_data, prob_matrix, model_name) {
       theme_minimal() +
       theme(plot.title = element_text(size = 14, face = "bold"),
             plot.subtitle = element_text(size = 12)) +
-      scale_color_brewer(palette = "Set1") +
       annotate("text", x = 0.5, y = 0.1, 
-               label = paste("AUC:", round(auc(roc(test_data$FTR == class_name, prob_matrix[, which(class_names == class_name)])), 3)), 
+               label = paste("AUC:", round(auc_values[i], 3)), 
                size = 5, hjust = 0.5)
-  })
-  
-  for (p in plots) {
+    
     print(p)
   }
 }
@@ -305,9 +293,8 @@ Rename the single row for each dataframe and concatenate all in a single one.
 ```{r}
 # Combine metrics for each model into a data frame
 combine_metrics <- function(roc_metrics_list) {
-  # Bind the list of data frames into one
   metrics <- do.call(rbind, roc_metrics_list)
-  rownames(metrics) <- colnames(prob_multinom_model)  # Set class names as row names
+  rownames(metrics) <- colnames(prob_multinom_model)
   return(metrics)
 }
 
@@ -413,13 +400,10 @@ print(conf_matrix_multinom_model.clean.inter)
 Now let’s apply automatic model selection to identity the best model.
 
 ```{r}
-# Fit a full multinomial model
 full_model <- multinom(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = test_data)
 
-# Apply stepwise selection
 stepwise_model <- stepAIC(full_model, direction = "both", trace = 1)
 
-# View the summary of the stepwise selected model
 summary(stepwise_model)
 ```
 
@@ -431,47 +415,38 @@ aic_clean <- AIC(multinom_model.clean)
 aic_clean_inter <- AIC(multinom_model.clean.inter)
 aic_stepwise <- AIC(stepwise_model)
 
-# Create a data frame with the models and their AIC values
 aic_results <- data.frame(
   Model = c("Full Model", "Interaction Full Model", "Cleaned Model", "Interaction Cleaned Model", "Stepwise Model"),
   AIC = c(aic_full, aic_full_inter, aic_clean, aic_clean_inter, aic_stepwise)
 )
 
-# Arrange the models by AIC (ascending order)
 aic_results_sorted <- aic_results %>% arrange(AIC)
 
-# Print the sorted AIC results
 print(aic_results_sorted)
 ```
 
 In terms of AIC the “Step model” is better.
 
 ```{r}
-# Compute probabilities for the stepwise model
 prob_stepwise_model <- predict(stepwise_model, test_data, type = "prob")
 
-# Plot ROC curve for stepwise model
 plot_roc(test_data, prob_stepwise_model, "Stepwise Model")
 ```
 
 Confusion Matrix for stepwise model
 
 ```{r}
-# Make sure that the response and prediction are factors with the same levels
 pred_stepwise <- predict(stepwise_model, test_data, type = "class")
 pred_stepwise <- factor(pred_stepwise, levels = levels(test_data$FTR))
 
-# Confusion matrix for the stepwise model
 conf_matrix_stepwise <- confusionMatrix(pred_stepwise, test_data$FTR)
 
-# Print the confusion matrix for the stepwise model
 print(conf_matrix_stepwise)
 ```
 
 Let's compare it with other models
 
 ```{r}
-# Extract metrics for each class from the confusion matrix
 specificity_awaywin <- conf_matrix_stepwise$byClass["Class: Away Win", "Specificity"]
 sensitivity_awaywin <- conf_matrix_stepwise$byClass["Class: Away Win", "Sensitivity"]
 
@@ -483,7 +458,6 @@ sensitivity_homewin <- conf_matrix_stepwise$byClass["Class: Home Win", "Sensitiv
 
 accuracy_stepwise <- conf_matrix_stepwise$overall["Accuracy"]
 
-# Combine these metrics into a single data frame for each class
 metrics_stepwise <- data.frame(
   Model = rep("Stepwise Model", 3),
   Class = c("Away Win", "Draw", "Home Win"),
@@ -493,13 +467,11 @@ metrics_stepwise <- data.frame(
   stringsAsFactors = FALSE  # Ensure strings are not converted to factors
 )
 
-# Combine with the existing comparison_df
 comparison_df <- rbind(
   comparison_df,  
   metrics_stepwise
 )
 
-# Print the comparison
 print(comparison_df)
 ```
 
@@ -513,20 +485,16 @@ y <- train_data$FTR
 # Scale predictors
 x_scaled <- scale(x)
 
-# Fit LASSO regression model
 model_fit.lasso <- glmnet(x_scaled, y, family = "multinomial", alpha = 1)
 
-# Plot the LASSO model
 plot(model_fit.lasso, xvar = "lambda", label = TRUE)
 ```
 
 We choose lambda using cross validation:
 
 ```{r}
-# Fit Lasso model using cross-validation to choose lambda
 modelcv.lasso <- cv.glmnet(x_scaled, y, alpha = 1, family = "multinomial")
 
-# Plot the lasso path
 plot(modelcv.lasso)
 ```
 
@@ -555,27 +523,22 @@ abline(v = log(lambda_1se), lwd = 1.2, lty = "dashed")
 These are the coefficients:
 
 ```{r}
-# Extract coefficients at the best lambda
 model_bestlam.lasso.coef <- coef(model_fit.lasso, s = lambda_1se)
 
-# Process coefficients for each class
 nonzero_coefs <- lapply(model_bestlam.lasso.coef, function(coef_matrix) {
   coef_matrix <- as.matrix(coef_matrix)
   coef_matrix[coef_matrix != 0, , drop = FALSE]
 })
 
 print(nonzero_coefs)
+
 ```
 
 Now we apply prediction on the test set.
 
 ```{r}
 
-# Prepare the data for the training set
 x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
-x_train_scaled <- scale(x_train)
-
-# Prepare the data for the test set
 x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
 
 # Align columns between training and test sets
@@ -622,24 +585,14 @@ pred_class_lasso <- factor(pred_class_lasso, levels = levels(test_data$FTR))
 Now, let's see the confusion matrix.
 
 ```{r}
-# Generate confusion matrix for the LASSO model
 conf_matrix_lasso <- confusionMatrix(pred_class_lasso, test_data$FTR)
 
-# Print the confusion matrix
 print(conf_matrix_lasso)
 ```
 
 Then we apply the roc function to obtain the best threshold value.
 
 ```{r}
-# Generate confusion matrix for the LASSO model
-conf_matrix_lasso <- confusionMatrix(pred_class_lasso, test_data$FTR)
-
-# Print the confusion matrix
-print("Confusion Matrix for LASSO Model:")
-print(conf_matrix_lasso)
-
-# Check the structure of predicted probabilities
 if (!is.data.frame(pred_prob_lasso)) {
   pred_prob_lasso <- as.data.frame(pred_prob_lasso)
 }
@@ -657,7 +610,6 @@ plot_roc(test_data, pred_prob_lasso, "LASSO Model")
 ```
 
 ```{r}
-# Extract metrics for each class from the LASSO confusion matrix
 specificity_awaywin_lasso <- conf_matrix_lasso$byClass["Class: Away Win", "Specificity"]
 sensitivity_awaywin_lasso <- conf_matrix_lasso$byClass["Class: Away Win", "Sensitivity"]
 
@@ -669,7 +621,6 @@ sensitivity_homewin_lasso <- conf_matrix_lasso$byClass["Class: Home Win", "Sensi
 
 accuracy_lasso <- conf_matrix_lasso$overall["Accuracy"]
 
-# Combine these metrics into a single data frame for each class
 metrics_lasso <- data.frame(
   Model = rep("LASSO Model", 3),
   Class = c("Away Win", "Draw", "Home Win"),
@@ -679,13 +630,11 @@ metrics_lasso <- data.frame(
   stringsAsFactors = FALSE  # Ensure strings are not converted to factors
 )
 
-# Combine with the existing comparison_df
 comparison_df <- rbind(
   comparison_df,  
   metrics_lasso
 )
 
-# Print the comparison
 print(comparison_df)
 ```
 
@@ -694,13 +643,10 @@ print(comparison_df)
 Now we try with ridge regression. As before we use as starting point the formula with all predictors and interaction term.
 
 ```{r}
-# Convert predictors to a matrix
 x <- model.matrix(FTR ~ ., data = train_data)[, -1] 
 
-# Response variable
 y <- train_data$FTR
 
-# Fit ridge regression model
 model_fit.ridge <- glmnet(
   x, 
   y, 
@@ -708,7 +654,6 @@ model_fit.ridge <- glmnet(
   alpha = 0
 )
 
-# Plot the ridge model
 plot(model_fit.ridge, xvar = "lambda", label = TRUE)
 ```
 
@@ -722,7 +667,6 @@ modelcv.ridge <- cv.glmnet(
   family = "multinomial"  
 )
 
-# Plot cross-validation results
 plot(modelcv.ridge)
 ```
 
@@ -742,20 +686,16 @@ modelcv_bestlam.ridge
 Now visualize again the ridge estimates as a function of the logarithm of λ and add a vertical line corresponding to best.lambda:
 
 ```{r}
-
 plot(model_fit.ridge, xvar = "lambda", label = TRUE)
 
 abline(v = log(modelcv_bestlam.ridge), lwd = 1.2, lty = "dashed", col = "red")
-
 ```
 
 These are the coefficients:
 
 ```{r}
-# Extract coefficients at the best lambda
 model_bestlam.ridge.coef <- coef(model_fit.ridge, s = lambda_1se)
 
-# Process coefficients for each class
 nonzero_coefs <- lapply(model_bestlam.ridge.coef, function(coef_matrix) {
   coef_matrix <- as.matrix(coef_matrix)
   coef_matrix[coef_matrix != 0, , drop = FALSE]
@@ -767,10 +707,8 @@ print(nonzero_coefs)
 We make the prediction on the test set.
 
 ```{r}
-# Extract coefficients at the best lambda
 model_bestlam.ridge.coef <- coef(model_fit.ridge, s = lambda_1se)
 
-# Process coefficients for each class
 nonzero_coefs <- lapply(model_bestlam.ridge.coef, function(coef_matrix) {
   coef_matrix <- as.matrix(coef_matrix)
   coef_matrix[coef_matrix != 0, , drop = FALSE]
@@ -780,22 +718,17 @@ print(nonzero_coefs)
 ```
 
 ```{r}
-# Prepare the data for the training set
 x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
 x_train_scaled <- scale(x_train)
 
-# Prepare the data for the test set
 x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
 
-# Align columns between training and test sets
 common_columns <- intersect(colnames(x_train), colnames(x_test))
 x_test <- x_test[, common_columns, drop = FALSE]                  
 x_train <- x_train[, common_columns, drop = FALSE]                
 
-# Rescale training data
 x_train_scaled <- scale(x_train)
 
-# Scale the test set using training set scaling parameters
 x_test_scaled <- scale(x_test, 
                        center = attr(x_train_scaled, "scaled:center"), 
                        scale = attr(x_train_scaled, "scaled:scale"))
@@ -811,31 +744,24 @@ modelcv.ridge <- cv.glmnet(x_train_scaled, train_data$FTR,
 # Get the best lambda (lambda.1se)
 model_bestlam.ridge <- modelcv.ridge$lambda.1se
 
-# Make predictions
 pred_class_ridge <- predict(model_fit.ridge, newx = x_test_scaled, s = model_bestlam.ridge, type = "class")
 
-# Check predictions
 cat("Predicted classes:\n")
 print(table(pred_class_ridge))
 
-# Ensure both variables are factors with matching levels
 test_data$FTR <- factor(test_data$FTR)
 pred_class_ridge <- factor(pred_class_ridge, levels = levels(test_data$FTR))
 
-# Verify overlap
 cat("\nOverlap in levels:\n")
 print(intersect(levels(pred_class_ridge), levels(test_data$FTR)))
 
-# Generate the confusion matrix
 conf_matrix_ridge <- confusionMatrix(pred_class_ridge, test_data$FTR)
 
-# Print the confusion matrix
 print(conf_matrix_ridge)
 
 ```
 
 ```{r}
-# Get predicted probabilities for Ridge model
 pred_prob_ridge <- predict(model_fit.ridge, 
                            newx = x_test_scaled, 
                            s = model_bestlam.ridge, 
@@ -843,19 +769,15 @@ pred_prob_ridge <- predict(model_fit.ridge,
 
 pred_prob_ridge <- matrix(pred_prob_ridge, ncol = length(levels(test_data$FTR)))
 
-# Ensure the column names match the levels of the response variable
 colnames(pred_prob_ridge) <- levels(test_data$FTR)
 
-# Generate true labels for ROC computation
 test_labels <- model.matrix(~ test_data$FTR - 1)
 colnames(test_labels) <- levels(test_data$FTR)
 
-# Plot the ROC curve for the Ridge model
 plot_roc(test_data, pred_prob_ridge, "Ridge Model")
 ```
 
 ```{r}
-# Extract metrics for each class from the Ridge confusion matrix
 specificity_awaywin_ridge <- conf_matrix_ridge$byClass["Class: Away Win", "Specificity"]
 sensitivity_awaywin_ridge <- conf_matrix_ridge$byClass["Class: Away Win", "Sensitivity"]
 
@@ -867,23 +789,20 @@ sensitivity_homewin_ridge <- conf_matrix_ridge$byClass["Class: Home Win", "Sensi
 
 accuracy_ridge <- conf_matrix_ridge$overall["Accuracy"]
 
-# Combine these metrics into a single data frame for each class
 metrics_ridge <- data.frame(
   Model = rep("Ridge Model", 3),
   Class = c("Away Win", "Draw", "Home Win"),
-  Accuracy = c(accuracy_ridge, accuracy_ridge, accuracy_ridge),  # Assuming accuracy is the same for all classes
+  Accuracy = c(accuracy_ridge, accuracy_ridge, accuracy_ridge), 
   Sensitivity = c(sensitivity_awaywin_ridge, sensitivity_draw_ridge, sensitivity_homewin_ridge),
   Specificity = c(specificity_awaywin_ridge, specificity_draw_ridge, specificity_homewin_ridge),
-  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
+  stringsAsFactors = FALSE
 )
 
-# Combine with the existing comparison_df
 comparison_df <- rbind(
   comparison_df,  
   metrics_ridge
 )
 
-# Print the comparison
 print(comparison_df)
 ```
 
@@ -892,58 +811,45 @@ print(comparison_df)
 Now we are going to deal with LDA or Linear Discriminant Analysis. For this type of Generative Model we decide to again use the full model.
 
 ```{r}
-# Prepare the data for the training set
 x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
 x_train_scaled <- scale(x_train)
 
-# Prepare the data for the test set
 x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
 
-# Align columns between training and test sets
 common_columns <- intersect(colnames(x_train), colnames(x_test))
 x_test <- x_test[, common_columns, drop = FALSE]                  
 x_train <- x_train[, common_columns, drop = FALSE]                
 
-# Rescale the training data
 x_train_scaled <- scale(x_train)
 
-# Scale the test set using training set scaling parameters
 x_test_scaled <- scale(x_test, 
                        center = attr(x_train_scaled, "scaled:center"), 
                        scale = attr(x_train_scaled, "scaled:scale"))
 
-# Fit LDA model
 lda_model <- lda(FTR ~ ., data = data.frame(x_train_scaled, FTR = train_data$FTR))
 
 ```
 
 ```{r}
-# Make predictions on the test set
 pred_class_lda <- predict(lda_model, newdata = data.frame(x_test_scaled))$class
 
-# Check predictions
 cat("Predicted classes:\n")
 print(table(pred_class_lda))
 
-# Ensure both variables are factors with matching levels
 test_data$FTR <- factor(test_data$FTR)
 pred_class_lda <- factor(pred_class_lda, levels = levels(test_data$FTR))
 
-# Verify overlap
 cat("\nOverlap in levels:\n")
 print(intersect(levels(pred_class_lda), levels(test_data$FTR)))
 ```
 
 ```{r}
-# Generate the confusion matrix for LDA model
 conf_matrix_lda <- confusionMatrix(pred_class_lda, test_data$FTR)
 
-# Print the confusion matrix
 print(conf_matrix_lda)
 ```
 
 ```{r}
-# Extract metrics for each class from the LDA confusion matrix
 specificity_awaywin_lda <- conf_matrix_lda$byClass["Class: Away Win", "Specificity"]
 sensitivity_awaywin_lda <- conf_matrix_lda$byClass["Class: Away Win", "Sensitivity"]
 
@@ -955,23 +861,20 @@ sensitivity_homewin_lda <- conf_matrix_lda$byClass["Class: Home Win", "Sensitivi
 
 accuracy_lda <- conf_matrix_lda$overall["Accuracy"]
 
-# Combine these metrics into a single data frame for each class
 metrics_lda <- data.frame(
   Model = rep("LDA Model", 3),
   Class = c("Away Win", "Draw", "Home Win"),
-  Accuracy = c(accuracy_lda, accuracy_lda, accuracy_lda),  # Assuming accuracy is the same for all classes
+  Accuracy = c(accuracy_lda, accuracy_lda, accuracy_lda), 
   Sensitivity = c(sensitivity_awaywin_lda, sensitivity_draw_lda, sensitivity_homewin_lda),
   Specificity = c(specificity_awaywin_lda, specificity_draw_lda, specificity_homewin_lda),
-  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
+  stringsAsFactors = FALSE
 )
 
-# Combine with the existing comparison_df
 comparison_df <- rbind(
   comparison_df,  
   metrics_lda
 )
 
-# Print the comparison
 print(comparison_df)
 ```
 
@@ -986,7 +889,6 @@ colnames(pred_prob_lda) <- levels(test_data$FTR)
 test_labels <- model.matrix(~ test_data$FTR - 1)
 colnames(test_labels) <- levels(test_data$FTR)
 
-# Plot the ROC curve for the LDA model
 plot_roc(test_data, pred_prob_lda, "LDA Model")
 ```
 
@@ -1004,7 +906,6 @@ Prediction for the test set:
 ```{r}
 # Get predicted probabilities for Naive Bayes model
 pred_prob_nb <- predict(model_nb, newdata = test_data, type = "raw")
-
 ```
 
 Let's plot the ROC :
@@ -1017,27 +918,21 @@ colnames(pred_prob_nb) <- levels(test_data$FTR)
 test_labels <- model.matrix(~ test_data$FTR - 1)
 colnames(test_labels) <- levels(test_data$FTR)
 
-# Plot the ROC curve for the Naive Bayes model
 plot_roc(test_data, pred_prob_nb, "Naive Bayes Model")
 ```
 
 ```{r}
-# Get class predictions for the test set
 pred_class_nb <- predict(model_nb, newdata = test_data)
 
-# Ensure both variables are factors with matching levels
 test_data$FTR <- factor(test_data$FTR)
 pred_class_nb <- factor(pred_class_nb, levels = levels(test_data$FTR))
 
-# Generate confusion matrix
 conf_matrix_nb <- confusionMatrix(pred_class_nb, test_data$FTR)
 
-# Print the confusion matrix
 print(conf_matrix_nb)
 ```
 
 ```{r}
-# Extract metrics for each class from the Naive Bayes confusion matrix
 specificity_awaywin_nb <- conf_matrix_nb$byClass["Class: Away Win", "Specificity"]
 sensitivity_awaywin_nb <- conf_matrix_nb$byClass["Class: Away Win", "Sensitivity"]
 
@@ -1049,23 +944,20 @@ sensitivity_homewin_nb <- conf_matrix_nb$byClass["Class: Home Win", "Sensitivity
 
 accuracy_nb <- conf_matrix_nb$overall["Accuracy"]
 
-# Combine these metrics into a single data frame for each class
 metrics_nb <- data.frame(
   Model = rep("Naive Bayes", 3),
   Class = c("Away Win", "Draw", "Home Win"),
-  Accuracy = c(accuracy_nb, accuracy_nb, accuracy_nb),  # Assuming accuracy is the same for all classes
+  Accuracy = c(accuracy_nb, accuracy_nb, accuracy_nb),
   Sensitivity = c(sensitivity_awaywin_nb, sensitivity_draw_nb, sensitivity_homewin_nb),
   Specificity = c(specificity_awaywin_nb, specificity_draw_nb, specificity_homewin_nb),
-  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
+  stringsAsFactors = FALSE
 )
 
-# Combine with the existing comparison_df
 comparison_df <- rbind(
   comparison_df,  
   metrics_nb
 )
 
-# Print the comparison
 print(comparison_df)
 
 ```
@@ -1124,9 +1016,3 @@ However, recalling the unbalanced problem, our choice of the top three overall m
 2. **Full Interaction Model**: This model also performs well, especially for the Draw class, indicating its effectiveness in capturing interactions between predictors.
 
 3. **Cleaned Model**: This model shows competitive performance, particularly for the Home Win class, suggesting that it effectively balances complexity and interpretability.
-
-## Saving the model
-
-```{r}
-saveRDS(multinom_model, "./model/model_file.rds")
-```
