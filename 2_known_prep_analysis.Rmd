@@ -461,10 +461,10 @@ accuracy_stepwise <- conf_matrix_stepwise$overall["Accuracy"]
 metrics_stepwise <- data.frame(
   Model = rep("Stepwise Model", 3),
   Class = c("Away Win", "Draw", "Home Win"),
-  Accuracy = c(accuracy_stepwise, accuracy_stepwise, accuracy_stepwise),  # Assuming accuracy is the same for all classes
+  Accuracy = c(accuracy_stepwise, accuracy_stepwise, accuracy_stepwise),  
   Sensitivity = c(sensitivity_awaywin, sensitivity_draw, sensitivity_homewin),
   Specificity = c(specificity_awaywin, specificity_draw, specificity_homewin),
-  stringsAsFactors = FALSE  # Ensure strings are not converted to factors
+  stringsAsFactors = FALSE  
 )
 
 comparison_df <- rbind(
@@ -479,7 +479,7 @@ print(comparison_df)
 
 ```{r}
 # Prepare the data
-x <- model.matrix(FTR ~ ., data = train_data)[, -1]
+x <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)[, -1]
 y <- train_data$FTR  
 
 # Scale predictors
@@ -538,8 +538,8 @@ Now we apply prediction on the test set.
 
 ```{r}
 
-x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
-x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
+x_train <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)[, -1]
+x_test <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = test_data)[, -1]
 
 # Align columns between training and test sets
 common_columns <- intersect(colnames(x_train), colnames(x_test))
@@ -643,7 +643,7 @@ print(comparison_df)
 Now we try with ridge regression. As before we use as starting point the formula with all predictors and interaction term.
 
 ```{r}
-x <- model.matrix(FTR ~ ., data = train_data)[, -1] 
+x <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)[, -1] 
 
 y <- train_data$FTR
 
@@ -718,10 +718,10 @@ print(nonzero_coefs)
 ```
 
 ```{r}
-x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
+x_train <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)[, -1]
 x_train_scaled <- scale(x_train)
 
-x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
+x_test <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = test_data)[, -1]
 
 common_columns <- intersect(colnames(x_train), colnames(x_test))
 x_test <- x_test[, common_columns, drop = FALSE]                  
@@ -811,7 +811,7 @@ print(comparison_df)
 Now we are going to deal with LDA or Linear Discriminant Analysis. For this type of Generative Model we decide to again use the full model.
 
 ```{r}
-x_train <- model.matrix(FTR ~ ., data = train_data)[, -1]
+x_train <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)[, -1]
 x_train_scaled <- scale(x_train)
 
 x_test <- model.matrix(FTR ~ ., data = test_data)[, -1]
@@ -897,7 +897,7 @@ plot_roc(test_data, pred_prob_lda, "LDA Model")
 Continuing with the analysis we try Naive Bayes algorithm. In this case we can’t use a model with interaction term since Naive Bayes do not support these relations. Thus we decide to use the Full Model. 
 
 ```{r}
-model_nb <- naiveBayes(FTR ~ ., data = train_data)
+model_nb <- naiveBayes(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)
 model_nb
 ```
 
