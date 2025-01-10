@@ -70,7 +70,7 @@ The different information of each match collected on the dataset is described in
 
 # Data exploration and cleaning
 
-The CSV file downloaded from the website contains data for each season of the Spanish La Liga, starting from the 2009/2010 season and spanning up to the 21st of October of the 2024/2025 season. Each season's data is structured with various match statistics, including final and half-time scores, team information, and disciplinary actions. The dataset provides a comprehensive overview of match outcomes and related metrics for analysis spanning multiple seasons.
+The CSV file downloaded from the website contains data for each season of the Spanish La Liga, starting from the 2009/2010 season and spanning 2022/2023 season. Each season's data is structured with various match statistics, including final and half-time scores, team information, and disciplinary actions. The dataset provides a comprehensive overview of match outcomes and related metrics for analysis spanning multiple seasons.
 
 I filtered out qualitative variables and statistics related to betting from the dataset, retaining only the essential match statistics for subsequent analysis.
 
