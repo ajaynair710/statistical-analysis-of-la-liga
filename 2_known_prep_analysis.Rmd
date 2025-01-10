@@ -518,7 +518,9 @@ Now visualize again the lasso estimates as a function of the logarithm of λ and
 ```{r}
 plot(model_fit.lasso, xvar = "lambda", label = TRUE)
 abline(v = log(lambda_1se), lwd = 1.2, lty = "dashed")
+
 ```
+
 
 These are the coefficients:
 
@@ -981,7 +983,7 @@ best_models_accuracy <- comparison_df %>%
 print(best_models_accuracy)
 ```
 
-The best model in terms of accuracy is the **Full Model** for the class "Away Win," the **Full Interaction Model** for the class "Draw," and the **Cleaned Model** for the class "Home Win."
+The best model in terms of accuracy is the **Cleaned Model** for the class "Away Win," the **Cleaned Interaction Model** for the class "Draw," and the **Full Model** for the class "Home Win."
 
 2. Sensitivity
 
@@ -994,7 +996,7 @@ best_models_sensitivity <- comparison_df %>%
 print(best_models_sensitivity)
 ```
 
-The best model in terms of sensitivity is the **Cleaned Interaction Model** for the class "Away Win," the **Full Model** for the class "Draw," and the **Stepwise Model** for the class "Home Win."
+The best model in terms of sensitivity is the **Cleaned Interaction Model** for the class "Away Win," the **Full Model** for the class "Draw," and the **Ridge Model** for the class "Home Win."
 
 3. Specificity
 
@@ -1007,12 +1009,22 @@ best_models_specificity <- comparison_df %>%
 print(best_models_specificity)
 ```
 
-The best model in terms of specificity is the **Stepwise Model** for the class "Away Win," the **LASSO Model** for the class "Draw," and the **Naive Bayes** for the class "Home Win."
+The best model in terms of specificity is the **LDA Model** for the class "Away Win," the **Ridge Model** for the class "Draw," and the **Naive Bayes** for the class "Home Win."
 
 However, recalling the unbalanced problem, our choice of the top three overall models is as follows:
 
-1. **Full Model**: This model demonstrates strong performance across all classes, particularly in accuracy and sensitivity for the Away Win and Home Win classes.
+1. **Stepwise Model**: This model shows the highest performance, particularly due to its good balance in sensitivity and specificity, making it a strong choice overall.
 
-2. **Full Interaction Model**: This model also performs well, especially for the Draw class, indicating its effectiveness in capturing interactions between predictors.
+2. **Ridge Model**: This Model also demonstrates solid performance across all three metrics, especially excelling in specificity.
 
-3. **Cleaned Model**: This model shows competitive performance, particularly for the Home Win class, suggesting that it effectively balances complexity and interpretability.
+3. **Full Interaction Model**: This model is another strong contender, showing high performance across accuracy and sensitivity, making it a good choice as well.
+
+So, choosing **Stepwise model** for predicting the final results for the matches of the 2023/2024 season. 
+
+
+# Saving the Model
+
+```{r}
+# Save the model object to a file
+saveRDS(stepwise_model, "./model/model_file.rds")
+```
