@@ -1,0 +1,56 @@
+---
+title: "3_unknown_analysis"
+author: "Ajay Prakash Nair"
+date: "2025-01-10"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+# Set CRAN mirror
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+
+# Other setup configurations
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Requirements
+
+```{r requirements}
+requirements=c("summarytools", "pROC", "glmnetUtils", "dplyr", "car", "effects", "gridExtra", "grid", "MASS","e1071", "mgcv", "readxl")
+
+for (req in requirements){
+  if (!require(req, character.only = TRUE)){
+      install.packages(req)
+  }
+}
+```
+
+```{r, include=FALSE}
+st_options(headings = FALSE)
+```
+
+# Loading the dataset
+```{r}
+# Read the data from the CSV file
+average_stats <- read.csv("./future_predictions/future_matches.csv")
+```
+
+# Loading the model
+
+```{r}
+# Load the model object from the saved file
+prediction_model <- readRDS("./model/model_file.rds")
+```
+
+# Make predictions
+```{r}
+predictions <- average_stats
+predictions$Prediction <- predict(prediction_model, newdata = predictions, "class")
+```
+
+# Write the predictions to a CSV file
+```{r}
+write.csv(predictions, "./future_predictions/predictions.csv", row.names = FALSE)
+```
+
