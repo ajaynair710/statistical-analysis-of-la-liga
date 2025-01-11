@@ -28,7 +28,7 @@ for (req in requirements){
 
 # Introduction
 
-The objective of this project is to analyze the statistical data of the Spanish La Liga football league spanning the last 10 seasons, including the current ongoing season. The dataset, sourced from http://www.football-data.co.uk/, provides comprehensive information on various aspects of each match, including final and half-time results, corner kicks, and disciplinary actions such as yellow and red cards. This dataset serves as a valuable resource for understanding the dynamics of football matches in one of Europe's top football leagues.
+The objective of this project is to analyze the statistical data of the Spanish La Liga football league spanning the last 9 seasons and predicting the result for the 2023/2024 season. The dataset, sourced from http://www.football-data.co.uk/, provides comprehensive information on various aspects of each match, including final and half-time results, corner kicks, and disciplinary actions such as yellow and red cards. This dataset serves as a valuable resource for understanding the dynamics of football matches in one of Europe's top football leagues.
 
 # Data Description
 
@@ -63,7 +63,7 @@ The different information of each match collected on the dataset is described in
 
 ## Analysis description
 
-- To identify trends and patterns in match outcomes over the past 10 seasons of La Liga.
+- To identify trends and patterns in match outcomes over the past 9 seasons of La Liga.
 - To explore the impact of various factors such as home advantage, team form, and disciplinary actions on match results.
 - To investigate any correlations between specific match statistics and overall team performance throughout the dataset period.
 - To gain insights into potential predictors of match outcomes and assess the predictive power of statistical models.
@@ -177,7 +177,7 @@ ggplotly(p_away_goals, tooltip = "text")
 
 Shots and Match Outcome
 
-We will analyze the relationship between shits and match results by visualizing the number of home and away shots for each match outcome.
+We will analyze the relationship between shots and match results by visualizing the number of home and away shots for each match outcome.
 
 ```{r}
 # Home Team Shots vs. Match Outcome
@@ -233,7 +233,7 @@ cat(teams, sep = "\n")
 
 # Team Analysis
 
-To begin the analysis, I have decided to start with only one team to simplify the operations. In this case, I have selected **FC Barcelona** as my team to analyze. The information is split into two different dataframes: one for the matches played as the Home Team and the other for the matches played as the Away Team. For the sake of order, I have divided each operation into different functions.
+To begin the analysis, I have decided to start with only one team to simplify the operations. In this case, I have selected **FC Barcelona** as my team to analyze. The information is split into two different dataframes: one for the matches played as the Home Team and the other for the matches played as the Away Team.
 
 ```{r}
 # Filter Barcelona's matches from the dataset
