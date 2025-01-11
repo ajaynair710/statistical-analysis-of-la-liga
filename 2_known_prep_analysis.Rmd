@@ -57,18 +57,15 @@ summary(multinom_model)
 ### Key Findings:
 
 - **Half-Time Goals**:
-  - **HTHG** (Half-Time Home Team Goals) significantly influences match outcomes and is especially important for predicting **Home Wins**.
-  - **HTAG** (Half-Time Away Team Goals) is more important for predicting **Away Wins**.
-
-- **Half-Time Result (HTR)**:
-  - **HTR** (Half-Time Result) plays an important role in determining match outcomes, particularly predicting **Home Wins** and **Away Wins** based on the halftime result.
+  - **HTHG** (Half-Time Home Team Goals) : Strongly affects the likelihood of "Home Win" (1.397862).
+  - **HTAG** (Half-Time Away Team Goals) : Increases the likelihood of "Away Win" (0.8065173).
 
 - **Shots on Target**:
-  - **HST** (Home Shots on Target) is significant for predicting **Home Wins**, where more shots on target decrease the likelihood of an **Away Win**.
+  - **HST** (Home Shots on Target) is significant for predicting **Home Wins**, with more shots on target decrease the likelihood of an **Away Win**.
   - **AST** (Away Shots on Target) is significant for predicting **Away Wins**, with more shots on target increasing the likelihood of an **Away Win**.
 
 - **Red Cards**:
-  - **HR** (Home Red Cards) has a significant positive effect on **Home Wins**. More home red cards increase the likelihood of a **Home Win**.
+  - **HR** (Home Red Cards) has a significant positive effect on **Away Wins**. More home red cards increase the likelihood of a **Away Win**.
   
   - **AR** (Away Red Cards) has a minor effect on **Home Wins**, suggesting it has a slight influence on match outcomes.
 
@@ -81,7 +78,7 @@ summary(multinom_model)
 vif(multinom_model)
 ```
 
-The HTR (Half-Time Result) variable has a high VIF of 49.97. Also, HS and AS have a VIF of more than 16 , suggesting significant multicollinearity with other predictors in the model. So, lets check mullticollinearity by removing it.
+The HTR (Half-Time Result) variable has a high VIF of 50.61. Also, HS and AS have a VIF of more than 18 , suggesting significant multicollinearity with other predictors in the model. So, lets check mullticollinearity by removing it.
 
 ```{r}
 multinom_model.clean <- update(multinom_model, .~.-HTR -HS -AS)
@@ -163,7 +160,7 @@ And it seems like that the full model is just slightly better with respect to th
 
 ## Model Interpretation
 
-We have decided to interpret the model multinom_model based on its lower AIC value (5860.762), which suggests that it provides the best balance between fit and complexity.
+We have decided to interpret the model multinom_model based on its lower AIC value (5286.169), which suggests that it provides the best balance between fit and complexity.
 
 To begin the interpretation, we recall the model’s summary:
 
@@ -344,7 +341,13 @@ print(comparison_df)
 
 ```
 
-The Full Model is best for accuracy, the Full Interaction Model excels in sensitivity, and the Cleaned Model performs best in specificity. We can see that the response is unbalanced.
+For **Away Win**, the model with the highest accuracy is the **Cleaned Model** (74.34%), which also has the highest specificity (74.13%), while the **Cleaned Interaction Model** achieves the highest sensitivity (80.58%).  
+
+For **Draw**, the model with the highest accuracy and specificity is the **Cleaned Interaction Model** (74.34% and 74.13%, respectively), whereas the **Full Model** provides the highest sensitivity (80.58%).  
+
+For **Home Win**, the **Full Model** achieves the highest accuracy and specificity (both at 74.34% and 74.13%), while the **Cleaned Model** performs best in terms of sensitivity (79.25%).
+
+We can see that the response is unbalanced.
 
 ### Confusion Matrixes
 
@@ -402,7 +405,7 @@ Now let’s apply automatic model selection to identity the best model.
 ```{r}
 full_model <- multinom(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = test_data)
 
-stepwise_model <- stepAIC(full_model, direction = "both", trace = 1)
+stepwise_model <- stepAIC(full_model, direction = "both", trace = 0)
 
 summary(stepwise_model)
 ```
@@ -709,17 +712,6 @@ print(nonzero_coefs)
 We make the prediction on the test set.
 
 ```{r}
-model_bestlam.ridge.coef <- coef(model_fit.ridge, s = lambda_1se)
-
-nonzero_coefs <- lapply(model_bestlam.ridge.coef, function(coef_matrix) {
-  coef_matrix <- as.matrix(coef_matrix)
-  coef_matrix[coef_matrix != 0, , drop = FALSE]
-})
-
-print(nonzero_coefs)
-```
-
-```{r}
 x_train <- model.matrix(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)[, -1]
 x_train_scaled <- scale(x_train)
 
@@ -748,14 +740,9 @@ model_bestlam.ridge <- modelcv.ridge$lambda.1se
 
 pred_class_ridge <- predict(model_fit.ridge, newx = x_test_scaled, s = model_bestlam.ridge, type = "class")
 
-cat("Predicted classes:\n")
-print(table(pred_class_ridge))
-
 test_data$FTR <- factor(test_data$FTR)
 pred_class_ridge <- factor(pred_class_ridge, levels = levels(test_data$FTR))
 
-cat("\nOverlap in levels:\n")
-print(intersect(levels(pred_class_ridge), levels(test_data$FTR)))
 
 conf_matrix_ridge <- confusionMatrix(pred_class_ridge, test_data$FTR)
 
@@ -835,14 +822,8 @@ lda_model <- lda(FTR ~ ., data = data.frame(x_train_scaled, FTR = train_data$FTR
 ```{r}
 pred_class_lda <- predict(lda_model, newdata = data.frame(x_test_scaled))$class
 
-cat("Predicted classes:\n")
-print(table(pred_class_lda))
-
 test_data$FTR <- factor(test_data$FTR)
 pred_class_lda <- factor(pred_class_lda, levels = levels(test_data$FTR))
-
-cat("\nOverlap in levels:\n")
-print(intersect(levels(pred_class_lda), levels(test_data$FTR)))
 ```
 
 ```{r}
@@ -896,7 +877,7 @@ plot_roc(test_data, pred_prob_lda, "LDA Model")
 
 ### Naive Bayes
 
-Continuing with the analysis we try Naive Bayes algorithm. In this case we can’t use a model with interaction term since Naive Bayes do not support these relations. Thus we decide to use the Full Model. 
+Continuing with the analysis we try Naive Bayes algorithm.
 
 ```{r}
 model_nb <- naiveBayes(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = train_data)
@@ -1011,20 +992,14 @@ print(best_models_specificity)
 
 The best model in terms of specificity is the **LDA Model** for the class "Away Win," the **Ridge Model** for the class "Draw," and the **Naive Bayes** for the class "Home Win."
 
-However, recalling the unbalanced problem, our choice of the top three overall models is as follows:
+One model that performs well across all conditions (Away Win, Draw, and Home Win) and balances accuracy, sensitivity, and specificity, the best choice would be the **Cleaned Model**. It provides good accuracy (74.34% for Away Win, 73.56% for Draw, and 72.99% for Home Win), good specificity (74.13% for Away Win, 71.81% for Draw, and 71.43% for Home Win), and good sensitivity (77.05% for Away Win, 79.25% for Draw, and 78.85% for Home Win). 
 
-1. **Stepwise Model**: This model shows the highest performance, particularly due to its good balance in sensitivity and specificity, making it a strong choice overall.
-
-2. **Ridge Model**: This Model also demonstrates solid performance across all three metrics, especially excelling in specificity.
-
-3. **Full Interaction Model**: This model is another strong contender, showing high performance across accuracy and sensitivity, making it a good choice as well.
-
-So, choosing **Stepwise model** for predicting the final results for the matches of the 2023/2024 season. 
+While no single model dominates all metrics in each case, the Cleaned Model offers a strong balance across all three classes, making it a reliable choice. So, choosing **Cleaned Model** for predicting the final results for the matches of the 2023/2024 season. 
 
 
 # Saving the Model
 
 ```{r}
 # Save the model object to a file
-saveRDS(stepwise_model, "./model/model_file.rds")
+saveRDS(multinom_model.clean, "./model/model_file.rds")
 ```
