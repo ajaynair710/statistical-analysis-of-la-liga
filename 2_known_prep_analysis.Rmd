@@ -42,7 +42,7 @@ cat("Testing data dimensions:", dim(test_data), "\n")
 
 # Logistic Regression
 
-The logistic regression analysis involves two main stages: model building and evaluation. In the model-building stage, logistic regression models are trained using the training dataset. Two models are considered: one with all variables and another with only relevant variables. The significance of each predictor variable is assessed based on the model summary and p-values.
+The logistic regression analysis involves two main stages: model building and evaluation. In the model-building stage, logistic regression models are trained using the training dataset. Two models are considered: one with all variables and another with only relevant variables.
 
 ```{r}
 # Relevel reference level as "Draw"
@@ -57,17 +57,16 @@ summary(multinom_model)
 ### Key Findings:
 
 - **Half-Time Goals**:
-  - **HTHG** (Half-Time Home Team Goals) : Strongly affects the likelihood of "Home Win" (1.397862).
-  - **HTAG** (Half-Time Away Team Goals) : Increases the likelihood of "Away Win" (0.8065173).
+  - **HTHG** (Half-Time Home Team Goals): Strongly affects the likelihood of a **Home Win** (1.397862).
+  - **HTAG** (Half-Time Away Team Goals): Increases the likelihood of an **Away Win** (0.8065173).
 
 - **Shots on Target**:
-  - **HST** (Home Shots on Target) is significant for predicting **Home Wins**, with more shots on target decrease the likelihood of an **Away Win**.
-  - **AST** (Away Shots on Target) is significant for predicting **Away Wins**, with more shots on target increasing the likelihood of an **Away Win**.
+  - **HST** (Home Shots on Target): Significant for predicting **Home Wins**, with more shots on target decreasing the likelihood of an **Away Win**.
+  - **AST** (Away Shots on Target): Significant for predicting **Away Wins**, with more shots on target increasing the likelihood of an **Away Win**.
 
 - **Red Cards**:
-  - **HR** (Home Red Cards) has a significant positive effect on **Away Wins**. More home red cards increase the likelihood of a **Away Win**.
-  
-  - **AR** (Away Red Cards) has a minor effect on **Home Wins**, suggesting it has a slight influence on match outcomes.
+  - **HR** (Home Red Cards): Has a significant positive effect on **Away Wins**. More home red cards increase the likelihood of an **Away Win**.
+  - **AR** (Away Red Cards): Has a minor effect on **Home Wins**, suggesting it has a slight influence on match outcomes.
 
 - **Other Match Statistics**:
   - Most other match statistics, such as **Fouls**, **Yellow Cards**, and **Corners**, show smaller or no significant effects on match outcomes.
@@ -111,10 +110,10 @@ The cleaned model appears to have a higher AIC thus up to now we prefer the full
 ## Interaction Terms
 
 We are adding the following interaction terms : 
-HTHG × HTAG: Home half-time goals × Away half-time goals
-HST × AST: Home shots on target × Away shots on target
-HR × AR: Home red cards × Away red cards
-HY × AY: Home yellow cards × Away yellow cards
+ **HTHG × HTAG** (Home half-time goals × Away half-time goals)
+ **HST × AST** (Home shots on target × Away shots on target)
+ **HR × AR** (Home red cards × Away red cards)
+ **HY × AY** (Home yellow cards × Away yellow cards)
 
 ```{r}
 multinom_model.inter <- update(multinom_model, 
@@ -139,10 +138,10 @@ AIC(multinom_model, multinom_model.clean, multinom_model.inter) %>% arrange(AIC)
 
 By looking at the AIC the best model remain the initial full model. Now let’s try adding interaction terms to the clean model. Now let’s add the following interactions:
 
-HTHG × HTAG: Home half-time goals × Away half-time goals
-HST × AST: Home shots on target × Away shots on target
-HR × AR: Home red cards × Away red cards
-HY × AY: Home yellow cards × Away yellow cards
+ **HTHG × HTAG** (Home half-time goals × Away half-time goals)
+ **HST × AST** (Home shots on target × Away shots on target)
+ **HR × AR** (Home red cards × Away red cards)
+ **HY × AY** (Home yellow cards × Away yellow cards)
 
 ```{r}
 multinom_model.clean.inter <- update(multinom_model.clean, 
@@ -188,7 +187,7 @@ plot(d, rescale.axis = FALSE, ylab = "Probability of FTR")
 
 ```
 
-As we can see, if Half Time Home Team Goals (HTHG) are greater than 3, the probability of the home team winning is 1; if Half Time Away Goals (HTAG) are greater than 2, the probability of the away team winning is more than 50%; if the Home Team Shots on Target (HST) are greater than 10, the probability of the home team winning is high; and if the Away Team Shots on Target (AST) are greater than 10, the probability of the away team winning is high.
+As we can see, if Half Time Home Team Goals (HTHG) are greater than 3, the probability of the home team winning is 1; if Half Time Away Goals (HTAG) are greater than 2, the probability of the away team winning is more than 0.5; if the Home Team Shots on Target (HST) are greater than 10, the probability of the home team winning is high; and if the Away Team Shots on Target (AST) are greater than 10, the probability of the away team winning is high.
 
 ## Model Comparison
 
@@ -399,8 +398,6 @@ print(conf_matrix_multinom_model.clean.inter)
 ## Model Selection
 
 ### Stepwise Model
-
-Now let’s apply automatic model selection to identity the best model.
 
 ```{r}
 full_model <- multinom(FTR ~ HTHG + HTAG + HTR + HS + AS + HST + AST + HF + AF + HC + AC + HY + AY + HR + AR, data = test_data)
@@ -693,7 +690,7 @@ Now visualize again the ridge estimates as a function of the logarithm of λ and
 ```{r}
 plot(model_fit.ridge, xvar = "lambda", label = TRUE)
 
-abline(v = log(modelcv_bestlam.ridge), lwd = 1.2, lty = "dashed", col = "red")
+abline(v = log(modelcv_bestlam.ridge), lwd = 1.2, lty = "dashed")
 ```
 
 These are the coefficients:
