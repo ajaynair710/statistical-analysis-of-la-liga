@@ -32,7 +32,7 @@ The objective of this project is to analyze the statistical data of the Spanish 
 
 # Data Description
 
-The dataset comprises detailed statistical records of matches played in the Spanish La Liga over the past decade. Each record includes information such as match date, teams involved, final and half-time scores, number of corner kicks, as well as disciplinary actions like yellow and red cards. The data is updated on a weekly basis via Travis-CI, ensuring its timeliness and relevance to ongoing analysis.
+The dataset comprises detailed statistical records of matches played in the Spanish La Liga over the past decade. Each record includes information such as match date, teams involved, final and half-time scores, number of corner kicks, as well as disciplinary actions like yellow and red cards.
 
 The different information of each match collected on the dataset is described in the following table:
 
